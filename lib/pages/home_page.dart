@@ -30,10 +30,9 @@ class HomePage extends StatelessWidget {
         ],
       ),
       backgroundColor: ColorsUniversal.background,
-      body: Column(children: [
-
-        ],
-      ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [Center(child: Text('No Products'))]),
     );
   }
 }

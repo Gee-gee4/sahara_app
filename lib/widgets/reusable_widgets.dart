@@ -90,5 +90,6 @@ AppBar myAppBar(String titleText) {
     title: Text(titleText, style: TextStyle(color: Colors.white)),
     centerTitle: true,
     backgroundColor: ColorsUniversal.appBarColor,
+    iconTheme: const IconThemeData(color: Colors.white),
   );
 }

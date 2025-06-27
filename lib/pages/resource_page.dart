@@ -57,7 +57,7 @@ class _ResourcePageState extends State<ResourcePage> {
                       context: context,
                       barrierDismissible: false,
                       builder: (_) =>
-                          const Center(child: CircularProgressIndicator()),
+                           Center(child: CircularProgressIndicator(color: ColorsUniversal.buttonsColor,)),
                     );
 
                     final success = await ResourceService.fetchAndSaveConfig(

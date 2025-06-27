@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -124,14 +125,23 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Align(
                   alignment: Alignment.bottomCenter,
-                  child: myButton(
-                    context,
-                    () => Navigator.push(
+                  child: myButton(context, () async {
+                    final modeString = _mode == OperationMode.manual
+                        ? 'manual'
+                        : 'auto';
+                    final receiptCount = _receipt == ReceiptNumber.single ? 1 : 2;
+
+                    await SharedPrefsHelper.savePosSettings(
+                      mode: modeString,
+                      receiptCount: receiptCount,
+                      printPolicies: _printPolicies,
+                    );
+
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => UsersPage()),
-                    ),
-                    'NEXT',
-                  ),
+                      MaterialPageRoute(builder: (_) => UsersPage()),
+                    );
+                  }, 'NEXT'),
                 ),
               ),
             ),

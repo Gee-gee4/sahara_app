@@ -1,3 +1,4 @@
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
@@ -7,13 +8,17 @@ class HomePage extends StatelessWidget {
   final String user;
   @override
   Widget build(BuildContext context) {
+    final items = <Widget>[
+      Icon(Icons.home, size: 30, color: Colors.grey[800]),
+      Icon(Icons.list_alt, size: 30, color: Colors.grey[800]),
+      Icon(Icons.settings, size: 30, color: Colors.grey[800]),
+    ];
     return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Products'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+      bottomNavigationBar: CurvedNavigationBar(
+        items: items,
+        height: 60,
+        backgroundColor: Colors.transparent,
+        animationDuration: Duration(milliseconds: 400),
       ),
       appBar: AppBar(
         title: Text(user, style: TextStyle(color: Colors.white)),
@@ -39,7 +44,7 @@ class HomePage extends StatelessWidget {
                         onPressed: () => Navigator.pop(context),
                         child: Text(
                           'Cancel',
-                          style: TextStyle(color: Colors.brown[800],fontSize: 17),
+                          style: TextStyle(color: Colors.brown[800], fontSize: 17),
                         ),
                       ),
                       TextButton(

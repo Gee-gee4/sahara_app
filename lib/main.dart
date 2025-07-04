@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:sahara_app/pages/resource_page.dart';
 
-void main() {
+void main() async {
+  await Hive.initFlutter();
+  await Hive.openBox('payment_modes');
+  await Hive.openBox('redeem_rewards');
+  await Hive.openBox('staff_list');
   runApp(const MyApp());
 }
 

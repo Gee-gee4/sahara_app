@@ -1,7 +1,12 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
-import 'package:sahara_app/helpers/device_validator.dart';
-import 'package:sahara_app/helpers/dummy_validator.dart';
+import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
+import 'package:sahara_app/modules/channel_service.dart';
+import 'package:sahara_app/modules/payment_mode_service.dart';
+import 'package:sahara_app/modules/redeem_rewards_service.dart';
+import 'package:sahara_app/modules/staff_list_service.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -91,19 +96,45 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
                 printPolicies: _printPolicies,
               );
 
-              final deviceId = await getDeviceId();
-              final isAllowed = await DummyValidator.isDeviceAllowed(deviceId);
+              // final deviceId = await getDeviceId();
+              // final isAllowed = await DummyValidator.isDeviceAllowed(deviceId);
+              // if (isAllowed) {
+              //   final prefs = await SharedPreferences.getInstance();
+              //   final channel = prefs.getString('channel') ?? 'Station';
+              final deviceId = '044ba7ee5cdd86c5';
+              //fetch channel details
+              final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
+              //fetch prdt payment modes
+              final acceptedProductModes =
+                  await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
+              print('✅ Accepted payment modes:');
+              for (var mode in acceptedProductModes) {
+                print('  • ${mode.payModeDisplayName} (${mode.payModeCategory})');
+              }
+              //fetch redeem rewards
+              final redeemRewards = await RedeemRewardsService.fetchRedeemRewards();
+              print('✅ Redeem rewards found:');
+              for (var reward in redeemRewards) {
+                print(
+                  '  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})',
+                );
+              }
+              //fetch staff list
+              final staffList = await StaffListService.fetchStaffList(deviceId);
+              print('✅ The Staff List is:');
+              for (var staff in staffList) {
+                print('  •${staff.staffName} (${staff.staffPin})');
+              }
 
-              if (isAllowed) {
+              if (channel != null) {
                 final prefs = await SharedPreferences.getInstance();
-                final channel = prefs.getString('channel') ?? 'Station';
-
+                await prefs.setString('channel', channel.channelName);
                 showDialog(
                   // ignore: use_build_context_synchronously
                   context: context,
                   builder: (_) => AlertDialog(
                     backgroundColor: ColorsUniversal.background,
-                    title: Text('${channel.toUpperCase()} Station'),
+                    title: Text(channel.channelName),
                     // content: Text('$channel station found. Proceed?'),
                     actions: [
                       TextButton(
@@ -111,34 +142,95 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
                           'OK',
                           style: TextStyle(color: Colors.brown[800], fontSize: 17),
                         ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => UsersPage()),
+                        onPressed: () async {
+                          //this saves the data
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('channelName', channel.channelName);
+                          await prefs.setString('companyName', channel.companyName);
+                          await prefs.setBool(
+                            'staffAutoLogOff',
+                            channel.staffAutoLogOff,
                           );
+                          await prefs.setInt(
+                            'noOfDecimalPlaces',
+                            channel.noOfDecimalPlaces,
+                          );
+                          await prefs.setInt('channelId', channel.channelId);
+
+                          //save payment modes to hive
+                          final box = Hive.box('payment_modes');
+                          final modesAsMaps = acceptedProductModes
+                              .map((mode) => mode.toJson())
+                              .toList();
+                          await box.put('acceptedModes', modesAsMaps);
+                          print(
+                            '✅ Saved ${modesAsMaps.length} payment modes to Hive',
+                          );
+
+                          // Save redeem rewards to Hive
+                          final rewards =
+                              await RedeemRewardsService.fetchRedeemRewards();
+                          final rewardsBox = Hive.box('redeem_rewards');
+
+                          // Convert each reward to a map and save
+                          final rewardsAsMaps = rewards
+                              .map((r) => r.toJson())
+                              .toList();
+                          await rewardsBox.put('rewardsList', rewardsAsMaps);
+
+                          print(
+                            '✅ Saved ${rewardsAsMaps.length} redeem rewards to Hive',
+                          );
+
+                          // Save staff list to Hive
+                          final staffBox = Hive.box('staff_list');
+
+                          // Convert staff list to List<Map<String, dynamic>>
+                          final staffAsMaps = staffList
+                              .map((staff) => staff.toJson())
+                              .toList();
+
+                          // Save to Hive under key 'staffList'
+                          await staffBox.put('staffList', staffAsMaps);
+
+                          print(
+                            '✅ Saved ${staffAsMaps.length} staff records to Hive',
+                          );
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => UsersPage()),
+                            );
+                          }
                         },
                       ),
                     ],
                   ),
                 );
               } else {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('Validation Failed'),
-                    content: Text(
-                      'This device is not registered.\nDevice ID: $deviceId',
-                      style: TextStyle(fontSize: 17),
-                    ),
-                    actions: [
-                      TextButton(
-                        child: Text('OK',style: TextStyle(color: Colors.brown[800], fontSize: 17),),
-                        onPressed: () => Navigator.pop(context),
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Validation Failed'),
+                      content: Text(
+                        'This device is not registered.\nDevice ID: $deviceId',
+                        style: TextStyle(fontSize: 17),
                       ),
-                    ],
-                  ),
-                );
+                      actions: [
+                        TextButton(
+                          child: Text(
+                            'OK',
+                            style: TextStyle(color: Colors.brown[800], fontSize: 17),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               }
             }, 'NEXT'),
           ],

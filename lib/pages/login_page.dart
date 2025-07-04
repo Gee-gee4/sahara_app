@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/dummy_users.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/home_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -10,6 +12,7 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: no_leading_underscores_for_local_identifiers
     final TextEditingController _pinController = TextEditingController();
 
     return Scaffold(
@@ -33,9 +36,31 @@ class LoginPage extends StatelessWidget {
             const SizedBox(height: 12),
             myButton(context, () {
               final enteredPin = _pinController.text.trim();
-              final success = DummyUsers.login(username, enteredPin);
 
-              if (success) {
+              // ✅ Get stored staff list from Hive
+              final box = Hive.box('staff_list');
+              final storedList = box.get('staffList', defaultValue: []) as List;
+              final List<StaffListModel> staffList = storedList
+                  .map((e) => StaffListModel.fromJson(Map<String, dynamic>.from(e)))
+                  .toList();
+
+              // ✅ Find the staff by username and validate pin
+              final matchedUser = staffList.firstWhere(
+                (staff) =>
+                    staff.staffName == username && staff.staffPin == enteredPin,
+                orElse: () => StaffListModel(
+                  // Provide a default invalid model
+                  staffId: -1,
+                  staffName: '',
+                  staffPin: '',
+                  staffPassword: '',
+                  roleId: -1,
+                  staffEmail: '',
+                ),
+              );
+
+              // Check against the invalid model instead of null
+              if (matchedUser.staffId != -1) {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (_) => HomePage(user: username)),
@@ -45,8 +70,8 @@ class LoginPage extends StatelessWidget {
                   context: context,
                   builder: (_) => AlertDialog(
                     backgroundColor: ColorsUniversal.background,
-                    title: Text('Login Failed'),
-                    content: Text('Incorrect PIN. Try again.'),
+                    title: const Text('Login Failed'),
+                    content: const Text('Incorrect PIN. Try again.'),
                     actions: [
                       TextButton(
                         child: Text(

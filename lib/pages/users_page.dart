@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sahara_app/helpers/dummy_users.dart';
+import 'package:hive/hive.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/login_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 
@@ -8,7 +9,12 @@ class UsersPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final users = DummyUsers.getUsernames();
+    final box = Hive.box('staff_list');
+    final storedList = box.get('staffList', defaultValue: []) as List;
+
+    final List<StaffListModel> staffList = storedList
+        .map((e) => StaffListModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
 
     return Scaffold(
       backgroundColor: ColorsUniversal.background,
@@ -33,13 +39,14 @@ class UsersPage extends StatelessWidget {
             const SizedBox(height: 12),
             Expanded(
               child: ListView.builder(
-                itemCount: users.length,
+                itemCount: staffList.length,
                 itemBuilder: (context, index) {
+                  final staff = staffList[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: ListTile(
-                      leading: Text(users[index], style: TextStyle(fontSize: 16)),
-                      tileColor: ColorsUniversal.fillWids,
+                      leading: Text(staff.staffName, style: TextStyle(fontSize: 16)),
+                      tileColor: Colors.brown[100],
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -47,7 +54,7 @@ class UsersPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => LoginPage(username: users[index]),
+                            builder: (_) => LoginPage(username: staff.staffName),
                           ),
                         );
                       },

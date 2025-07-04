@@ -1,35 +1,43 @@
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:sahara_app/pages/products_page.dart';
+import 'package:sahara_app/pages/settings_page.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
   final String user;
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    Column(
+      children: [
+        Center(child: Text('No Products')),
+        ElevatedButton(onPressed: () {}, child: Text('data'))
+      ],
+    ),
+    ProductsPage(),
+    SettingsPage(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final items = <Widget>[
-      Icon(Icons.home, size: 30, color: Colors.grey[800]),
-      Icon(Icons.list_alt, size: 30, color: Colors.grey[800]),
-      Icon(Icons.settings, size: 30, color: Colors.grey[800]),
-    ];
     return Scaffold(
-      bottomNavigationBar: CurvedNavigationBar(
-        items: items,
-        height: 60,
-        backgroundColor: Colors.transparent,
-        animationDuration: Duration(milliseconds: 400),
-      ),
+      backgroundColor: ColorsUniversal.background,
       appBar: AppBar(
-        title: Text(user, style: TextStyle(color: Colors.white)),
+        title: Text(widget.user, style: TextStyle(color: Colors.white70)),
         centerTitle: true,
         backgroundColor: ColorsUniversal.appBarColor,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: Colors.white70),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.card_membership_sharp, color: Colors.white),
-          ),
+          IconButton(onPressed: () {}, icon: Icon(Icons.card_membership_sharp)),
           IconButton(
             onPressed: () {
               showDialog(
@@ -65,14 +73,28 @@ class HomePage extends StatelessWidget {
                 },
               );
             },
-            icon: Icon(Icons.logout, color: Colors.white),
+            icon: Icon(Icons.logout, color: Colors.white70),
           ),
         ],
       ),
-      backgroundColor: ColorsUniversal.background,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [Center(child: Text('No Products'))],
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: ConvexAppBar(
+        backgroundColor: ColorsUniversal.fillWids,
+        activeColor: ColorsUniversal.buttonsColor,
+        color: Colors.white70,
+        style: TabStyle.react, // or `fixed`, `flip`, etc.
+        curveSize: 70,
+        items: const [
+          TabItem(icon: Icons.home, title: 'Home',),
+          TabItem(icon: Icons.list_alt, title: 'Products'),
+          TabItem(icon: Icons.settings, title: 'Settings'),
+        ],
+        initialActiveIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

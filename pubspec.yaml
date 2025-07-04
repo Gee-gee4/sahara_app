@@ -37,11 +37,16 @@ dependencies:
   shared_preferences: ^2.5.3
   http:
   device_info_plus: 
-  curved_navigation_bar: 
+  convex_bottom_bar: 
+  hive: 
+  hive_flutter: 
+  path_provider: 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  hive_generator:
+  build_runner: 
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

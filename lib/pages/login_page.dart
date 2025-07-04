@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:sahara_app/helpers/dummy_users.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/home_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';

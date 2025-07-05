@@ -42,37 +42,51 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
             const Text('Select Operation Mode', style: TextStyle(fontSize: 16)),
             RadioListTile<OperationMode>(
               activeColor: ColorsUniversal.buttonsColor,
-              tileColor: ColorsUniversal.fillWids,
+              tileColor: Colors.brown[100],
               title: const Text('Manual'),
               value: OperationMode.manual,
               groupValue: _mode,
               onChanged: (value) => setState(() => _mode = value!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusGeometry.circular(12),
+              ),
             ),
+            SizedBox(height: 8),
             RadioListTile<OperationMode>(
               activeColor: ColorsUniversal.buttonsColor,
-              tileColor: ColorsUniversal.fillWids,
+              tileColor: Colors.brown[100],
               title: const Text('Auto'),
               value: OperationMode.auto,
               groupValue: _mode,
               onChanged: (value) => setState(() => _mode = value!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusGeometry.circular(12),
+              ),
             ),
             const SizedBox(height: 12),
             const Text('Number of Receipts', style: TextStyle(fontSize: 16)),
             RadioListTile<ReceiptNumber>(
               activeColor: ColorsUniversal.buttonsColor,
-              tileColor: ColorsUniversal.fillWids,
+              tileColor: Colors.brown[100],
               title: const Text('Single'),
               value: ReceiptNumber.single,
               groupValue: _receipt,
               onChanged: (value) => setState(() => _receipt = value!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusGeometry.circular(12),
+              ),
             ),
+            SizedBox(height: 8),
             RadioListTile<ReceiptNumber>(
               activeColor: ColorsUniversal.buttonsColor,
-              tileColor: ColorsUniversal.fillWids,
+              tileColor: Colors.brown[100],
               title: const Text('Double'),
               value: ReceiptNumber.double,
               groupValue: _receipt,
               onChanged: (value) => setState(() => _receipt = value!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusGeometry.circular(12),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -219,7 +233,6 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
                             '✅ Saved ${staffAsMaps.length} staff records to Hive',
                           );
 
-                          
                           // Save products to Hive
                           final products = await ProductService.fetchProductItems(
                             deviceId,

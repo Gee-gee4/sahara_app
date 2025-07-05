@@ -7,6 +7,7 @@ void main() async {
   await Hive.openBox('payment_modes');
   await Hive.openBox('redeem_rewards');
   await Hive.openBox('staff_list');
+  await Hive.openBox('products');
   runApp(const MyApp());
 }
 

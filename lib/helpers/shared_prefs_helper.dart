@@ -27,3 +27,8 @@ class SharedPrefsHelper {
     await prefs.setBool('printPolicies', printPolicies);
   }
 }
+
+Future<String?> apiUrl() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('webApiServiceUrl');
+}

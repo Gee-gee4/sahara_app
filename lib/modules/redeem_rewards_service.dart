@@ -2,13 +2,19 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/redeem_rewards_model.dart';
 
 class RedeemRewardsService {
-  static const String baseUrl = "https://cmb.saharafcs.com/api";
-
+  static Future<String?> get baseUrl async {
+    final url = await apiUrl();
+    if (url == null) {
+      return null;
+    }
+    return '$url/api';
+  }
   static Future<List<RedeemRewardsModel>> fetchRedeemRewards() async {
-    final url = Uri.parse('$baseUrl/RedeemRewards');
+     final url = Uri.parse('${await baseUrl}/RedeemRewards');
 
     try {
       final response = await http.get(url);

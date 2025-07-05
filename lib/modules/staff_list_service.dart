@@ -3,14 +3,21 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/permissions_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 
 class StaffListService {
-  static const baseUrl = "https://cmb.saharafcs.com/api";
+  static Future<String?> get baseUrl async {
+    final url = await apiUrl();
+    if (url == null) {
+      return null;
+    }
+    return '$url/api';
+  }
 
   static Future<List<StaffListModel>> fetchStaffList(String deviceId) async {
-    final url = Uri.parse('$baseUrl/ChannelStaff/$deviceId');
+     final url = Uri.parse('${await baseUrl}/ChannelStaff/$deviceId');
 
     try {
       final response = await http.get(url);

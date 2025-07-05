@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/modules/channel_service.dart';
 import 'package:sahara_app/modules/payment_mode_service.dart';
+import 'package:sahara_app/modules/product_service.dart';
 import 'package:sahara_app/modules/redeem_rewards_service.dart';
 import 'package:sahara_app/modules/staff_list_service.dart';
 import 'package:sahara_app/pages/users_page.dart';
@@ -102,8 +103,10 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
               //   final prefs = await SharedPreferences.getInstance();
               //   final channel = prefs.getString('channel') ?? 'Station';
               final deviceId = '044ba7ee5cdd86c5';
+
               //fetch channel details
               final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
+
               //fetch prdt payment modes
               final acceptedProductModes =
                   await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
@@ -111,6 +114,7 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
               for (var mode in acceptedProductModes) {
                 print('  • ${mode.payModeDisplayName} (${mode.payModeCategory})');
               }
+
               //fetch redeem rewards
               final redeemRewards = await RedeemRewardsService.fetchRedeemRewards();
               print('✅ Redeem rewards found:');
@@ -119,11 +123,29 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
                   '  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})',
                 );
               }
+
               //fetch staff list
               final staffList = await StaffListService.fetchStaffList(deviceId);
               print('✅ The Staff List is:');
               for (var staff in staffList) {
                 print('  •${staff.staffName} (${staff.staffPin})');
+              }
+
+              //fetch products
+              // fetch products
+              final productItems = await ProductService.fetchProductItems(deviceId);
+
+              print('✅ Product categories fetched:');
+              for (var category in productItems) {
+                print('📦 Category: ${category.productCategoryName}');
+                for (var product in category.products) {
+                  print('   • Product: ${product.productName}');
+                  for (var variation in product.productVariations) {
+                    print(
+                      '     - ${variation.productVariationName}: KES ${variation.productVariationPrice}',
+                    );
+                  }
+                }
               }
 
               if (channel != null) {
@@ -195,6 +217,22 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
 
                           print(
                             '✅ Saved ${staffAsMaps.length} staff records to Hive',
+                          );
+
+                          
+                          // Save products to Hive
+                          final products = await ProductService.fetchProductItems(
+                            deviceId,
+                          );
+                          final productsBox = Hive.box('products');
+
+                          final productsAsMaps = products
+                              .map((p) => p.toJson())
+                              .toList();
+                          await productsBox.put('productItems', productsAsMaps);
+
+                          print(
+                            '✅ Saved ${productsAsMaps.length} product categories to Hive',
                           );
 
                           if (context.mounted) {

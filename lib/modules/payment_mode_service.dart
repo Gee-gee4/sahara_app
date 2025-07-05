@@ -3,22 +3,29 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/payment_mode_model.dart';
 
 class PaymentModeService {
-  static const String baseUrl = "https://cmb.saharafcs.com/api";
+  static Future<String?> get baseUrl async {
+    final url = await apiUrl();
+    if (url == null) {
+      return null;
+    }
+    return '$url/api';
+  }
 
   static Future<List<PaymentModeModel>> fetchPosAcceptedModesByDevice(
     String deviceId,
   ) async {
-    final url = Uri.parse('$baseUrl/ChannelProductPayModes/$deviceId');
+     final url = Uri.parse('${await baseUrl}/ChannelProductPayModes/$deviceId');
 
     try {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> jsonList = data['paymentModes']; // <-- extract the list
+        final List<dynamic> jsonList = data['paymentModes']; 
 
 
         final allModes = jsonList

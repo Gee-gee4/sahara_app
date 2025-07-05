@@ -11,7 +11,7 @@ import 'package:sahara_app/modules/staff_list_service.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // We’ll create this for getDeviceId()
+import 'package:shared_preferences/shared_preferences.dart'; // We'll create this for getDeviceId()
 
 class PosSettingsPage extends StatefulWidget {
   const PosSettingsPage({super.key});
@@ -37,70 +37,80 @@ class _PosSettingsPageState extends State<PosSettingsPage> {
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Select Operation Mode', style: TextStyle(fontSize: 16)),
-            RadioListTile<OperationMode>(
-              activeColor: ColorsUniversal.buttonsColor,
-              tileColor: Colors.brown[100],
-              title: const Text('Manual'),
-              value: OperationMode.manual,
-              groupValue: _mode,
-              onChanged: (value) => setState(() => _mode = value!),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadiusGeometry.circular(12),
-              ),
-            ),
-            SizedBox(height: 8),
-            RadioListTile<OperationMode>(
-              activeColor: ColorsUniversal.buttonsColor,
-              tileColor: Colors.brown[100],
-              title: const Text('Auto'),
-              value: OperationMode.auto,
-              groupValue: _mode,
-              onChanged: (value) => setState(() => _mode = value!),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadiusGeometry.circular(12),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text('Number of Receipts', style: TextStyle(fontSize: 16)),
-            RadioListTile<ReceiptNumber>(
-              activeColor: ColorsUniversal.buttonsColor,
-              tileColor: Colors.brown[100],
-              title: const Text('Single'),
-              value: ReceiptNumber.single,
-              groupValue: _receipt,
-              onChanged: (value) => setState(() => _receipt = value!),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadiusGeometry.circular(12),
-              ),
-            ),
-            SizedBox(height: 8),
-            RadioListTile<ReceiptNumber>(
-              activeColor: ColorsUniversal.buttonsColor,
-              tileColor: Colors.brown[100],
-              title: const Text('Double'),
-              value: ReceiptNumber.double,
-              groupValue: _receipt,
-              onChanged: (value) => setState(() => _receipt = value!),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadiusGeometry.circular(12),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Print Policies', style: TextStyle(fontSize: 16)),
-                Switch(
-                  activeColor: ColorsUniversal.appBarColor,
-                  value: _printPolicies,
-                  onChanged: (value) => setState(() => _printPolicies = value),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Select Operation Mode',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    RadioListTile<OperationMode>(
+                      activeColor: ColorsUniversal.buttonsColor,
+                      tileColor: Colors.brown[100],
+                      title: const Text('Manual'),
+                      value: OperationMode.manual,
+                      groupValue: _mode,
+                      onChanged: (value) => setState(() => _mode = value!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<OperationMode>(
+                      activeColor: ColorsUniversal.buttonsColor,
+                      tileColor: Colors.brown[100],
+                      title: const Text('Auto'),
+                      value: OperationMode.auto,
+                      groupValue: _mode,
+                      onChanged: (value) => setState(() => _mode = value!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Number of Receipts', style: TextStyle(fontSize: 16)),
+                    RadioListTile<ReceiptNumber>(
+                      activeColor: ColorsUniversal.buttonsColor,
+                      tileColor: Colors.brown[100],
+                      title: const Text('Single'),
+                      value: ReceiptNumber.single,
+                      groupValue: _receipt,
+                      onChanged: (value) => setState(() => _receipt = value!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<ReceiptNumber>(
+                      activeColor: ColorsUniversal.buttonsColor,
+                      tileColor: Colors.brown[100],
+                      title: const Text('Double'),
+                      value: ReceiptNumber.double,
+                      groupValue: _receipt,
+                      onChanged: (value) => setState(() => _receipt = value!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Print Policies', style: TextStyle(fontSize: 16)),
+                        Switch(
+                          activeColor: ColorsUniversal.appBarColor,
+                          value: _printPolicies,
+                          onChanged: (value) => setState(() => _printPolicies = value),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-            const Spacer(),
             myButton(context, () async {
               final modeString = _mode == OperationMode.manual ? 'manual' : 'auto';
               final receiptCount = _receipt == ReceiptNumber.single ? 1 : 2;

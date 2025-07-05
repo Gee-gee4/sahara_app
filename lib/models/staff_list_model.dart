@@ -1,3 +1,5 @@
+import 'package:sahara_app/models/permissions_model.dart';
+
 class StaffListModel {
   StaffListModel({
     required this.staffId,
@@ -6,6 +8,7 @@ class StaffListModel {
     required this.staffPassword,
     required this.roleId,
     required this.staffEmail,
+    required this.permissions,
   });
   final int staffId;
   final String staffName;
@@ -13,15 +16,34 @@ class StaffListModel {
   final String staffPassword;
   final int roleId;
   final String staffEmail;
+  final List<PermissionsModel> permissions;
 
-  factory StaffListModel.fromJson(Map<String, dynamic> json) {
+  factory StaffListModel.fromJson(
+    Map<String, dynamic> json, {
+    List<PermissionsModel>? allPermission,
+    Map<int, List<int>>? rolePermisionsMap,
+  }) {
+    int roleId = json['roleId'];
+    late final List<PermissionsModel> userPermissions;
+    if (allPermission != null && rolePermisionsMap != null) {
+      final List<int> userPermissionIds = rolePermisionsMap[roleId] ?? [];
+      userPermissions = allPermission
+          .where((perm) => userPermissionIds.contains(perm.id))
+          .toList();
+    } else {
+      userPermissions = List<Map>.from(
+        json['permissions'] ?? [],
+      ).map((p) => PermissionsModel.fromJson(p)).toList();
+    }
+
     return StaffListModel(
       staffId: json['staffId'],
       staffName: json['staffName'] ?? '',
       staffPin: json['staffPin'] ?? '',
       staffPassword: json['staffPassword'] ?? '',
-      roleId: json['roleId'],
+      roleId: roleId,
       staffEmail: json['staffEmail'] ?? '',
+      permissions: userPermissions,
     );
   }
 
@@ -32,5 +54,6 @@ class StaffListModel {
     'staffPassword': staffPassword,
     'roleId': roleId,
     'staffEmail': staffEmail,
+    'permissions': permissions.map((p) => p.toJson()).toList(),
   };
 }

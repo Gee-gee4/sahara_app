@@ -55,6 +55,7 @@ class LoginPage extends StatelessWidget {
                   staffPassword: '',
                   roleId: -1,
                   staffEmail: '',
+                  permissions: []
                 ),
               );
 

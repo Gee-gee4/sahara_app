@@ -2,11 +2,15 @@ import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/models/product_category_model.dart';
+import 'package:sahara_app/pages/cart_page.dart';
+import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/pages/product_list_page.dart';
 import 'package:sahara_app/pages/products_page.dart';
 import 'package:sahara_app/pages/settings_page.dart';
+import 'package:sahara_app/pages/sync_items_page.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
+import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
@@ -182,18 +186,40 @@ class _HomePageState extends State<HomePage> {
         actions: [
           // ADVANCED DROPDOWN
           PopupMenuButton<String>(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.circular(16),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             color: ColorsUniversal.background,
-            // borderRadius: BorderRadius.circular(25),
             icon: Icon(Icons.build_circle_outlined, color: Colors.white70, size: 28),
-            onSelected: (value) {},
-            itemBuilder: (context) => [
+            onSelected: (value) {
+              if (value == 'sync') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SyncItemsPage()),
+                );
+              } else if (value == 'pos') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => Scaffold(
+                      backgroundColor: ColorsUniversal.background,
+                      appBar: myAppBar('POS Settings'),
+                      body: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: PosSettingsForm(showSyncButton: false),
+                      ),
+                    ),
+                  ),
+                );
+              } else if (value == 'automation') {
+                // Add automation settings page nav
+              } else if (value == 'cloud') {
+                // Add cloud settings page nav
+              }
+            },
+            itemBuilder: (context) => const [
               PopupMenuItem(value: 'sync', child: Text('Sync Items')),
+              PopupMenuItem(value: 'pos', child: Text('POS Settings')),
               PopupMenuItem(value: 'automation', child: Text('Automation Settings')),
               PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
-              PopupMenuItem(value: 'pos', child: Text('POS Settings')),
             ],
           ),
 
@@ -263,6 +289,18 @@ class _HomePageState extends State<HomePage> {
           });
         },
       ),
+      // Floating Action Button positioned above bottom nav
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => CartPage()),
+        ),
+        backgroundColor: ColorsUniversal.buttonsColor, // Customize color
+        child: Icon(Icons.shopping_cart, color: Colors.white70),
+      ),
+
+      // Position the FAB properly
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

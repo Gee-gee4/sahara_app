@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/models/product_model.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
@@ -58,11 +59,10 @@ class _ProductsPageState extends State<ProductsPage> {
   }
 
   @override
-void dispose() {
-  _searchController.dispose();
-  super.dispose();
-}
-
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +105,7 @@ void dispose() {
                   SizedBox(height: 12),
                   Expanded(
                     child: GridView.builder(
-                      itemCount:_filteredProducts.length,
+                      itemCount: _filteredProducts.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         childAspectRatio: .9,
@@ -149,7 +149,22 @@ void dispose() {
                                     ),
                                   ),
                                 SizedBox(height: 6),
-                                myButton(context, () {}, 'ADD TO CART'),
+                                myButton(context, () {
+                                  if (variation != null) {
+                                    CartStorage.addToCart(
+                                      product.productName,
+                                      variation.productVariationPrice,
+                                      variation.productVariationId.toString(),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${product.productName} added to cart',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }, 'ADD TO CART'),
                               ],
                             ),
                           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_model.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -49,13 +50,6 @@ class _ProductListPageState extends State<ProductListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsUniversal.background,
-      // appBar: AppBar(
-      //   leading: IconButton(icon: Icon(Icons.arrow_back), onPressed: widget.onBack),
-      //   title: Text(widget.categoryName),
-      //   backgroundColor: ColorsUniversal.appBarColor,
-      //   foregroundColor: Colors.white,
-      // ),
-
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -128,7 +122,22 @@ class _ProductListPageState extends State<ProductListPage> {
                               ),
                             ),
                           SizedBox(height: 6),
-                          myButton(context, () {}, 'ADD TO CART'),
+                          myButton(context, () {
+                            if (variation != null) {
+                              CartStorage.addToCart(
+                                product.productName,
+                                variation.productVariationPrice,
+                                variation.productVariationId.toString(),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${product.productName} added to cart',
+                                  ),
+                                ),
+                              );
+                            }
+                          }, 'ADD TO CART'),
                         ],
                       ),
                     ),

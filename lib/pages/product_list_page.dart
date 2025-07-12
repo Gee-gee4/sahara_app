@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_model.dart';
+import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
@@ -134,6 +135,12 @@ class _ProductListPageState extends State<ProductListPage> {
                                   content: Text(
                                     '${product.productName} added to cart',
                                   ),
+                                  //behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(milliseconds: 500),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  backgroundColor: hexToColor('8f9c68'),
                                 ),
                               );
                             }

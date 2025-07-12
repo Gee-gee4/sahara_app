@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 
@@ -56,32 +57,62 @@ Column reusableTextField(
 
 //........................................................................................
 
+
 SizedBox myButton(
   BuildContext context,
   Function onTap,
   String buttonText, {
   TextStyle buttonTextStyle = const TextStyle(color: Colors.white),
+  bool isLoading = false,
+  String loadingText = 'Syncing...',
 }) {
   return SizedBox(
     width: MediaQuery.of(context).size.width,
-    // width: 150,
     height: 55.0,
-    // decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
     child: ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: ColorsUniversal.buttonsColor,
         elevation: 1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadiusGeometry.circular(25),
+          borderRadius: BorderRadius.circular(25),
         ),
       ),
-      onPressed: () {
-        onTap();
-      },
-      child: Text(buttonText, style: buttonTextStyle),
+      onPressed: isLoading ? null : () => onTap(),
+      child: isLoading
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: SpinKitCircle(
+                    size: 22,
+                    duration: const Duration(milliseconds: 1000),
+                    itemBuilder: (context, index) {
+                      final colors = [
+                        Colors.white, // make sure it fits the button's color
+                        Colors.white54,
+                      ];
+                      final color = colors[index % colors.length];
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(loadingText, style: buttonTextStyle),
+              ],
+            )
+          : Text(buttonText, style: buttonTextStyle),
     ),
   );
 }
+
 
 //........................................................................................
 

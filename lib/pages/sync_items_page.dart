@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/modules/channel_service.dart';
 import 'package:sahara_app/modules/payment_mode_service.dart';
 import 'package:sahara_app/modules/product_service.dart';
 import 'package:sahara_app/modules/redeem_rewards_service.dart';
 import 'package:sahara_app/modules/staff_list_service.dart';
+import 'package:sahara_app/utils/color_hex.dart';
+import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,13 +36,25 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
   Future<void> handleSync(String method) async {
     // Store context locally before async operations
     final currentContext = context;
-    
+
     if (!currentContext.mounted) return;
-    
+
     showDialog(
       context: currentContext,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => Center(
+        child: SpinKitCircle(
+          size: 70,
+          duration: Duration(milliseconds: 1000),
+          itemBuilder: (context, index) {
+            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+            final color = colors[index % colors.length];
+            return DecoratedBox(
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            );
+          },
+        ),
+      ),
     );
 
     try {
@@ -90,14 +105,25 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
       if (currentContext.mounted) {
         Navigator.of(currentContext).pop();
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(content: Text('Synced $method')),
+          SnackBar(
+           backgroundColor: hexToColor('8f9c68'),
+            content: Text('Successfully synced $method'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
       if (currentContext.mounted) {
         Navigator.of(currentContext).pop();
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(content: Text('❌ Failed to sync $method: ${e.toString()}')),
+          SnackBar(
+            backgroundColor: Colors.grey,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            content: Text(' Failed to sync $method: ${e.toString()}'),
+          ),
         );
       }
     }
@@ -125,7 +151,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                color: Colors.brown[100],
+                color: Colors.brown[50],
                 elevation: 4,
                 child: Center(
                   child: Column(
@@ -157,9 +183,5 @@ class _SyncItem {
   final IconData icon;
   final String syncMethod;
 
-  _SyncItem({
-    required this.label,
-    required this.icon,
-    required this.syncMethod,
-  });
+  _SyncItem({required this.label, required this.icon, required this.syncMethod});
 }

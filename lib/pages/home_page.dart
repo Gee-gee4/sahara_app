@@ -1,6 +1,7 @@
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/pages/cart_page.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
@@ -58,8 +59,13 @@ class _HomePageState extends State<HomePage> {
                 final category = _filteredCategories[index];
                 return Padding(
                   padding: const EdgeInsets.all(5.0),
-                  child: InkWell(
-                    onTap: () {
+                  child: Card(
+                    color: Colors.brown[50],
+                    child: InkWell(
+                      radius: 3,
+                      //splashColor: ColorsUniversal.fillWids,
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
                       setState(() {
                         _activeCategoryPage = ProductListPage(
                           categoryName: category.productCategoryName,
@@ -72,8 +78,6 @@ class _HomePageState extends State<HomePage> {
                         );
                       });
                     },
-                    child: Card(
-                      color: Colors.brown[50],
                       child: SizedBox(
                         width: 120,
                         child: Padding(
@@ -291,12 +295,20 @@ class _HomePageState extends State<HomePage> {
       ),
       // Floating Action Button positioned above bottom nav
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => CartPage()),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CartPage()),
+          ).then((_) => setState(() {})); // Refresh when coming back
+        },
+        backgroundColor: ColorsUniversal.buttonsColor,
+        child: Badge(
+          isLabelVisible: CartStorage.cartItems.isNotEmpty,
+          label: Text('${CartStorage.cartItems.length}'),
+          offset: Offset(9, -9),
+          backgroundColor: ColorsUniversal.appBarColor,
+          child: const Icon(Icons.shopping_cart, color: Colors.white70),
         ),
-        backgroundColor: ColorsUniversal.buttonsColor, // Customize color
-        child: Icon(Icons.shopping_cart, color: Colors.white70),
       ),
 
       // Position the FAB properly

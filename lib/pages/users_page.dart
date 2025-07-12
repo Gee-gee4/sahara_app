@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/modules/staff_list_service.dart';
 import 'package:sahara_app/pages/login_page.dart';
+import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 
 class UsersPage extends StatefulWidget {
@@ -32,54 +34,73 @@ class _UsersPageState extends State<UsersPage> {
   }
 
   Future<void> refreshStaffList() async {
-  // Show loading indicator
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(child: CircularProgressIndicator()),
-  );
+    // Store context locally before async operations
+    final currentContext = context;
+    if (!currentContext.mounted) return;
 
-  try {
-    // Fetch from API
-    final deviceId = '044ba7ee5cdd86c5'; // Or load from SharedPrefs
-    final newStaffList = await StaffListService.fetchStaffList(deviceId);
-
-    // Save to Hive
-    final box = Hive.box('staff_list');
-    final staffAsMaps = newStaffList.map((e) => e.toJson()).toList();
-    await box.put('staffList', staffAsMaps);
-
-    // Reload UI from Hive
-    loadStaffListFromHive();
-
-    // Close the loading dialog
-    if (context.mounted) Navigator.pop(context);
-
-    // ✅ Show "Synced" SnackBar
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Synced users!'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+    // Show loading indicator
+    showDialog(
+      context: currentContext,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: SpinKitCircle(
+          size: 70,
+          duration: const Duration(milliseconds: 1000),
+          itemBuilder: (context, index) {
+            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+            final color = colors[index % colors.length];
+            return DecoratedBox(
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            );
+          },
         ),
-      );
-    }
-  } catch (e) {
-    // Close dialog and show error
-    if (context.mounted) Navigator.pop(context);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ Failed to refresh staff list'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ),
+    );
+
+    try {
+      // Fetch from API
+      final deviceId = '044ba7ee5cdd86c5'; // Or load from SharedPrefs
+      final newStaffList = await StaffListService.fetchStaffList(deviceId);
+
+      // Save to Hive
+      final box = Hive.box('staff_list');
+      final staffAsMaps = newStaffList.map((e) => e.toJson()).toList();
+      await box.put('staffList', staffAsMaps);
+
+      // Reload UI from Hive
+      loadStaffListFromHive();
+
+      // Close the loading dialog
+      if (currentContext.mounted) Navigator.pop(currentContext);
+
+      // Show success feedback
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(
+            content: const Text('Successfully synced users!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: hexToColor('8f9c68'),
+            duration: const Duration(seconds: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close dialog if still mounted
+      if (currentContext.mounted) Navigator.pop(currentContext);
+
+      // Show error feedback if still mounted
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh: ${e.toString()}'),
+            backgroundColor: Colors.grey,
+          ),
+        );
+      }
+      debugPrint('Error refreshing staff list: $e');
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +134,10 @@ class _UsersPageState extends State<UsersPage> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: ListTile(
-                      leading: Text(staff.staffName, style: const TextStyle(fontSize: 16)),
+                      leading: Text(
+                        staff.staffName,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       tileColor: Colors.brown[100],
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -137,4 +161,3 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 }
-

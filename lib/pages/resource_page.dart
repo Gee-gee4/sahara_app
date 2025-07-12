@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:sahara_app/modules/resource_service.dart';
 import 'package:sahara_app/pages/pos_settings_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
@@ -56,8 +57,25 @@ class _ResourcePageState extends State<ResourcePage> {
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (_) =>
-                           Center(child: CircularProgressIndicator(color: ColorsUniversal.buttonsColor,)),
+                      builder: (_) => Center(
+                        child: SpinKitCircle(
+                          size: 70,
+                          duration: Duration(milliseconds: 1000),
+                          itemBuilder: (context, index) {
+                            final colors = [
+                              ColorsUniversal.buttonsColor,
+                              ColorsUniversal.fillWids,
+                            ];
+                            final color = colors[index % colors.length];
+                            return DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     );
 
                     final success = await ResourceService.fetchAndSaveConfig(

@@ -1,10 +1,12 @@
 // ignore_for_file: unused_field
 
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/models/product_model.dart';
+import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
@@ -74,7 +76,22 @@ class _ProductsPageState extends State<ProductsPage> {
       //   foregroundColor: Colors.white,
       // ),
       body: _allProducts.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: SpinKitCircle(
+                size: 70,
+                duration: Duration(milliseconds: 1000),
+                itemBuilder: (context, index) {
+                  final colors = [
+                    ColorsUniversal.buttonsColor,
+                    ColorsUniversal.fillWids,
+                  ];
+                  final color = colors[index % colors.length];
+                  return DecoratedBox(
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  );
+                },
+              ),
+            )
           : Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -160,6 +177,15 @@ class _ProductsPageState extends State<ProductsPage> {
                                       SnackBar(
                                         content: Text(
                                           '${product.productName} added to cart',
+                                        ),
+                                        duration: const Duration(milliseconds: 500),
+                                        backgroundColor: hexToColor('8f9c68'),
+                                        behavior: SnackBarBehavior
+                                            .fixed, // Default fixed behavior
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(12),
+                                          ),
                                         ),
                                       ),
                                     );

@@ -46,7 +46,7 @@ Column reusableTextField(
                   onPressed: toggleOnOff,
                   icon: Icon(
                     showText ? Icons.visibility_off : Icons.visibility,
-                    color: hexToColor('005954'),
+                    color: ColorsUniversal.buttonsColor,
                   ),
                 ),
         ),

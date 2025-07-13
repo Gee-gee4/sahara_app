@@ -5,15 +5,26 @@ import 'package:sahara_app/pages/home_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   final String username;
   const LoginPage({super.key, required this.username});
 
   @override
-  Widget build(BuildContext context) {
-    // ignore: no_leading_underscores_for_local_identifiers
-    final TextEditingController _pinController = TextEditingController();
+  State<LoginPage> createState() => _LoginPageState();
+}
 
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _pinController = TextEditingController();
+  bool _showPin = false;
+
+  @override
+  void dispose() {
+    _pinController.dispose(); // Clean up the controller
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: myAppBar('User'),
       body: Padding(
@@ -21,15 +32,17 @@ class LoginPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              username,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-            ),
+            Text(widget.username, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400)),
             reusableTextField(
               'Enter Pin',
               null,
-              true,
+              _showPin,
               _pinController,
+              toggleOnOff: () {
+                setState(() {
+                  _showPin = !_showPin;
+                });
+              },
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 12),
@@ -45,8 +58,7 @@ class LoginPage extends StatelessWidget {
 
               // ✅ Find the staff by username and validate pin
               final matchedUser = staffList.firstWhere(
-                (staff) =>
-                    staff.staffName == username && staff.staffPin == enteredPin,
+                (staff) => staff.staffName == widget.username && staff.staffPin == enteredPin,
                 orElse: () => StaffListModel(
                   // Provide a default invalid model
                   staffId: -1,
@@ -55,16 +67,13 @@ class LoginPage extends StatelessWidget {
                   staffPassword: '',
                   roleId: -1,
                   staffEmail: '',
-                  permissions: []
+                  permissions: [],
                 ),
               );
 
               // Check against the invalid model instead of null
               if (matchedUser.staffId != -1) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => HomePage(user: username)),
-                );
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(user: widget.username)));
               } else {
                 showDialog(
                   context: context,
@@ -74,10 +83,7 @@ class LoginPage extends StatelessWidget {
                     content: const Text('Incorrect PIN. Try again.'),
                     actions: [
                       TextButton(
-                        child: Text(
-                          'OK',
-                          style: TextStyle(color: Colors.brown[800], fontSize: 17),
-                        ),
+                        child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],

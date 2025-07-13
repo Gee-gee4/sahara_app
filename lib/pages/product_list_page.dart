@@ -10,16 +10,13 @@ class ProductListPage extends StatefulWidget {
   final List<ProductModel> products;
   final VoidCallback onBack;
 
-  const ProductListPage({
-    super.key,
-    required this.categoryName,
-    required this.products,
-    required this.onBack,
-  });
+  const ProductListPage({super.key, required this.categoryName, required this.products, required this.onBack});
 
   @override
   State<ProductListPage> createState() => _ProductListPageState();
 }
+
+enum PrdtAmtQty { amount, quantity }
 
 class _ProductListPageState extends State<ProductListPage> {
   final TextEditingController _searchController = TextEditingController();
@@ -59,10 +56,7 @@ class _ProductListPageState extends State<ProductListPage> {
               controller: _searchController,
               onChanged: _filterProducts,
               decoration: InputDecoration(
-                hint: Text(
-                  'Search Products',
-                  style: TextStyle(color: Colors.grey[400]),
-                ),
+                hint: Text('Search Products', style: TextStyle(color: Colors.grey[400])),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
                 prefixIcon: Icon(Icons.search),
                 enabledBorder: OutlineInputBorder(
@@ -88,9 +82,7 @@ class _ProductListPageState extends State<ProductListPage> {
                 ),
                 itemBuilder: (context, index) {
                   final product = _filteredProducts[index];
-                  final variation = product.productVariations.isNotEmpty
-                      ? product.productVariations[0]
-                      : null;
+                  final variation = product.productVariations.isNotEmpty ? product.productVariations[0] : null;
 
                   return Card(
                     color: Colors.brown[50],
@@ -99,51 +91,118 @@ class _ProductListPageState extends State<ProductListPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.shopping_cart,
-                            size: 36,
-                            color: Colors.brown[300],
-                          ),
+                          Icon(Icons.shopping_cart, size: 36, color: Colors.brown[300]),
                           const SizedBox(height: 12),
                           Text(
                             product.productName,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 8),
                           if (variation != null)
                             Text(
                               'Ksh ${variation.productVariationPrice.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: Colors.brown[400],
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: TextStyle(color: Colors.brown[400], fontWeight: FontWeight.w500),
                             ),
                           SizedBox(height: 6),
                           myButton(context, () {
-                            if (variation != null) {
-                              CartStorage.addToCart(
-                                product.productName,
-                                variation.productVariationPrice,
-                                variation.productVariationId.toString(),
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${product.productName} added to cart',
-                                  ),
-                                  //behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(milliseconds: 500),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  backgroundColor: hexToColor('8f9c68'),
-                                ),
-                              );
-                            }
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                final controller = TextEditingController();
+                                // ignore: no_leading_underscores_for_local_identifiers
+                                PrdtAmtQty _sellMode = PrdtAmtQty.amount;
+                                return StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return AlertDialog(
+                                      backgroundColor: ColorsUniversal.background,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      title: Text(product.productName),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: RadioListTile(
+                                                  activeColor: ColorsUniversal.buttonsColor,
+                                                  contentPadding: EdgeInsets.zero,
+                                                  title: Text('Amount'),
+                                                  value: PrdtAmtQty.amount,
+                                                  groupValue: _sellMode,
+                                                  onChanged: (value) => setState(() => _sellMode = value!),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: RadioListTile(
+                                                  activeColor: ColorsUniversal.buttonsColor,
+                                                  contentPadding: EdgeInsets.zero,
+                                                  title: Text('Quantity'),
+                                                  value: PrdtAmtQty.quantity,
+                                                  groupValue: _sellMode,
+                                                  onChanged: (value) => setState(() => _sellMode = value!),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          TextField(
+                                            controller: controller,
+                                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                            decoration: InputDecoration(
+                                              labelText: _sellMode == PrdtAmtQty.amount
+                                                  ? 'Enter Amount'
+                                                  : 'Enter Quantity',
+                                              labelStyle: TextStyle(color: Colors.brown[300]),
+                                              focusedBorder: UnderlineInputBorder(
+                                                borderSide: BorderSide(
+                                                  color: ColorsUniversal.buttonsColor,
+                                                ), // Focus border color
+                                              ),
+                                            ),
+                                            cursorColor: ColorsUniversal.buttonsColor,
+                                            style: TextStyle(color: ColorsUniversal.buttonsColor),
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: ColorsUniversal.buttonsColor,
+                                          ),
+                                          onPressed: () {
+                                            final input = double.tryParse(controller.text);
+                                            if (input == null || input <= 0) {
+                                              return;
+                                            }
+                                            final pricePerUnit = variation!.productVariationPrice;
+                                            double quantity = _sellMode == PrdtAmtQty.amount
+                                                ? input / pricePerUnit
+                                                : input;
+
+                                            CartStorage.addToCart(product.productName, pricePerUnit, quantity);
+                                            Navigator.pop(context);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('${product.productName} added to cart'),
+                                                duration: Duration(milliseconds: 700),
+                                                backgroundColor: hexToColor('8f9c68'),
+                                                behavior: SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                            );
+                                          },
+                                          child: Text('Submit', style: TextStyle(color: Colors.white)),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
                           }, 'ADD TO CART'),
                         ],
                       ),

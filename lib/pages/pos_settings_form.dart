@@ -394,8 +394,9 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    if (rootContext.mounted)
+                                    if (rootContext.mounted) {
                                       Navigator.pop(rootContext);
+                                    }
                                   },
                                 ),
                               ],

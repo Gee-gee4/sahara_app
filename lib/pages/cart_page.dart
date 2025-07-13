@@ -19,10 +19,7 @@ class _CartPageState extends State<CartPage> {
   List<String> paymentModes = [];
 
   double getTotalPrice() {
-    return CartStorage.cartItems.fold(
-      0,
-      (sum, item) => sum + (item.price * item.quantity),
-    );
+    return CartStorage.cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
   }
 
   @override
@@ -36,9 +33,7 @@ class _CartPageState extends State<CartPage> {
     final savedModes = box.get('acceptedModes') as List?;
 
     if (savedModes != null) {
-      final names = savedModes
-          .map((e) => e['payModeDisplayName'] as String)
-          .toList();
+      final names = savedModes.map((e) => e['payModeDisplayName'] as String).toList();
 
       setState(() {
         paymentModes = names;
@@ -65,9 +60,7 @@ class _CartPageState extends State<CartPage> {
                         SnackBar(
                           backgroundColor: hexToColor('8f9c68'),
                           content: Text('Successfully cleared cart'),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           behavior: SnackBarBehavior.floating,
                           duration: const Duration(seconds: 1),
                         ),
@@ -77,9 +70,7 @@ class _CartPageState extends State<CartPage> {
                       SnackBar(
                         backgroundColor: Colors.grey,
                         content: Text('Cart is empty!'),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         behavior: SnackBarBehavior.floating,
                         duration: const Duration(seconds: 2),
                       ),
@@ -98,22 +89,19 @@ class _CartPageState extends State<CartPage> {
                 itemCount: cartItems.length,
                 itemBuilder: (context, index) {
                   final item = cartItems[index];
-                  final total = item.price * item.quantity;
+                  final total = item.unitPrice * item.quantity;
                   return Card(
                     color: Colors.brown[100],
                     child: SizedBox(
                       width: double.infinity,
                       height: 105,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 10,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                         child: Row(
                           children: [
                             // Product name & price - give it a fixed or max width
                             SizedBox(
-                              width: 150,
+                              width: 100,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,22 +110,16 @@ class _CartPageState extends State<CartPage> {
                                     item.name,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 17,
-                                    ),
+                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
                                   ),
-                                  Text(
-                                    'Ksh ${item.price}',
-                                    style: TextStyle(color: Colors.black54),
-                                  ),
+                                  Text('Ksh ${item.unitPrice}', style: TextStyle(color: Colors.black54)),
                                 ],
                               ),
                             ),
 
                             // Quantity container – fixed width
                             SizedBox(
-                              width: 130,
+                              width: 140,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -151,17 +133,17 @@ class _CartPageState extends State<CartPage> {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(
-                                            Icons.remove_circle_outline,
-                                          ),
+                                          padding: EdgeInsets.zero,
+                                          icon: const Icon(Icons.remove_circle_outline),
                                           onPressed: () {
                                             setState(() {
-                                              if (item.quantity > 1) item.quantity--;
+                                              CartStorage.decrementQuantity(item.name);
                                             });
                                           },
                                         ),
-                                        Text('${item.quantity}'),
+                                        Text(item.quantity.toStringAsFixed(2)),
                                         IconButton(
+                                          padding: EdgeInsets.zero,
                                           icon: const Icon(Icons.add_circle_outline),
                                           onPressed: () {
                                             setState(() {
@@ -175,12 +157,13 @@ class _CartPageState extends State<CartPage> {
                                 ],
                               ),
                             ),
-                            SizedBox(width: 6),
+                            SizedBox(width: 5),
                             // Amount & delete – fixed width
                             SizedBox(
                               width: 120,
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                                // crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -188,9 +171,7 @@ class _CartPageState extends State<CartPage> {
                                     children: [
                                       Text(
                                         'Amt: ${total.toStringAsFixed(0)}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                        style: TextStyle(fontWeight: FontWeight.w500),
                                       ),
                                     ],
                                   ),
@@ -201,14 +182,8 @@ class _CartPageState extends State<CartPage> {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             backgroundColor: hexToColor('8f9c68'),
-                                            content: Text(
-                                              'Successfully deleted product',
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(
-                                                12,
-                                              ),
-                                            ),
+                                            content: Text('Successfully deleted product'),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                             behavior: SnackBarBehavior.floating,
                                             duration: const Duration(seconds: 1),
                                           ),
@@ -246,15 +221,10 @@ class _CartPageState extends State<CartPage> {
                     labelText: 'Select Payment Mode',
                     labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
                     border: OutlineInputBorder(),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
-                    ),
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: hexToColor('8f9c68'),
-                        width: 2,
-                      ), // selected border
+                      borderSide: BorderSide(color: hexToColor('8f9c68'), width: 2), // selected border
                     ),
                   ),
                   items: paymentModes.map((mode) {
@@ -265,8 +235,7 @@ class _CartPageState extends State<CartPage> {
                       selectedPaymentMode = value!;
                     });
                   },
-                  validator: (value) =>
-                      value == null ? 'Please select a payment mode' : null,
+                  validator: (value) => value == null ? 'Please select a payment mode' : null,
                 ),
 
                 SizedBox(height: 10),
@@ -278,9 +247,7 @@ class _CartPageState extends State<CartPage> {
                         content: Text('Please add some products to checkout!'),
                         duration: Duration(seconds: 1),
                         backgroundColor: Colors.grey,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -294,9 +261,7 @@ class _CartPageState extends State<CartPage> {
                         content: Text('Please select a payment mode'),
                         duration: Duration(seconds: 1),
                         backgroundColor: Colors.grey,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -307,13 +272,9 @@ class _CartPageState extends State<CartPage> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       title: Text('Checked Out!'),
-                      content: Text(
-                        'You have checked out using "$selectedPaymentMode".',
-                      ),
+                      content: Text('You have checked out using "$selectedPaymentMode".'),
                       actions: [
                         TextButton(
                           onPressed: () {

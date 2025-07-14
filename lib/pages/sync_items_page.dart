@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive/hive.dart';
+import 'package:sahara_app/helpers/sync_helper.dart';
 import 'package:sahara_app/modules/channel_service.dart';
 import 'package:sahara_app/modules/payment_mode_service.dart';
 import 'package:sahara_app/modules/product_service.dart';
@@ -25,11 +26,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
     _SyncItem(label: 'Channel', icon: Icons.device_hub, syncMethod: 'channel'),
     _SyncItem(label: 'Products', icon: Icons.shopping_bag, syncMethod: 'products'),
     _SyncItem(label: 'Staff', icon: Icons.people, syncMethod: 'staff'),
-    _SyncItem(
-      label: 'Payment Modes',
-      icon: Icons.payment,
-      syncMethod: 'payment_modes',
-    ),
+    _SyncItem(label: 'Payment Modes', icon: Icons.payment, syncMethod: 'payment_modes'),
     _SyncItem(label: 'Redeem Rewards', icon: Icons.redeem, syncMethod: 'rewards'),
   ];
 
@@ -87,8 +84,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
           break;
 
         case 'payment_modes':
-          final acceptedModes =
-              await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
+          final acceptedModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
           final modeBox = Hive.box('payment_modes');
           final modesAsMaps = acceptedModes.map((m) => m.toJson()).toList();
           await modeBox.put('acceptedModes', modesAsMaps);
@@ -106,7 +102,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
         Navigator.of(currentContext).pop();
         ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(
-           backgroundColor: hexToColor('8f9c68'),
+            backgroundColor: hexToColor('8f9c68'),
             content: Text('Successfully synced $method'),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             behavior: SnackBarBehavior.floating,
@@ -132,7 +128,65 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: myAppBar('Sync Items'),
+      appBar: myAppBar(
+        'Sync Items',
+        actions: [
+          ElevatedButton.icon(
+            onPressed: () async {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => Center(
+                  child: SpinKitCircle(
+                    size: 70,
+                    duration: const Duration(milliseconds: 1000),
+                    itemBuilder: (context, index) {
+                      final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+                      final color = colors[index % colors.length];
+                      return DecoratedBox(
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      );
+                    },
+                  ),
+                ),
+              );
+
+              try {
+                await fullResourceSync(deviceId: deviceId, context: context);
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: hexToColor('8f9c68'),
+                    content: const Text('All resources synced successfully'),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                    // content: Text('All resources synced successfully'),
+                    // behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Sync failed: ${e.toString()}'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.grey,
+                  ),
+                );
+              }
+            },
+            icon: Icon(Icons.sync, color: ColorsUniversal.fillWids),
+            label: const Text('Sync All', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ColorsUniversal.buttonsColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: GridView.builder(
@@ -148,9 +202,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
             return GestureDetector(
               onTap: () => handleSync(item.syncMethod),
               child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 color: Colors.brown[50],
                 elevation: 4,
                 child: Center(
@@ -159,13 +211,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
                     children: [
                       Icon(item.icon, size: 40, color: Colors.brown[800]),
                       const SizedBox(height: 10),
-                      Text(
-                        item.label,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      Text(item.label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),

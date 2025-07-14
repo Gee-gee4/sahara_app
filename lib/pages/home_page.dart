@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/pages/cart_page.dart';
+import 'package:sahara_app/pages/cloud_settings.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/pages/product_list_page.dart';
 import 'package:sahara_app/pages/products_page.dart';
@@ -30,10 +31,7 @@ class _HomePageState extends State<HomePage> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hint: Text(
-                'Search Product Categories',
-                style: TextStyle(color: Colors.grey[400]),
-              ),
+              hint: Text('Search Product Categories', style: TextStyle(color: Colors.grey[400])),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
               prefixIcon: Icon(Icons.search),
               enabledBorder: OutlineInputBorder(
@@ -51,10 +49,7 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             child: GridView.builder(
               itemCount: _filteredCategories.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: .9,
-              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .9),
               itemBuilder: (context, index) {
                 final category = _filteredCategories[index];
                 return Padding(
@@ -66,18 +61,18 @@ class _HomePageState extends State<HomePage> {
                       //splashColor: ColorsUniversal.fillWids,
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
-                      setState(() {
-                        _activeCategoryPage = ProductListPage(
-                          categoryName: category.productCategoryName,
-                          products: category.products,
-                          onBack: () {
-                            setState(() {
-                              _activeCategoryPage = null;
-                            });
-                          },
-                        );
-                      });
-                    },
+                        setState(() {
+                          _activeCategoryPage = ProductListPage(
+                            categoryName: category.productCategoryName,
+                            products: category.products,
+                            onBack: () {
+                              setState(() {
+                                _activeCategoryPage = null;
+                              });
+                            },
+                          );
+                        });
+                      },
                       child: SizedBox(
                         width: 120,
                         child: Padding(
@@ -92,19 +87,10 @@ class _HomePageState extends State<HomePage> {
                                 color: ColorsUniversal.fillWids,
                               ),
                               SizedBox(height: 12),
-                              Text(
-                                'Category Name:',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.black54,
-                                ),
-                              ),
+                              Text('Category Name:', style: TextStyle(fontSize: 15, color: Colors.black54)),
                               Text(
                                 category.productCategoryName,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
@@ -140,9 +126,7 @@ class _HomePageState extends State<HomePage> {
     final data = box.get('productItems') as List?;
 
     if (data != null) {
-      final loadedCategories = data
-          .map((e) => ProductCategoryModel.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+      final loadedCategories = data.map((e) => ProductCategoryModel.fromJson(Map<String, dynamic>.from(e))).toList();
 
       setState(() {
         _allcategories = loadedCategories;
@@ -170,9 +154,7 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
   List<Widget> get _screens => [
-    _activeCategoryPage != null
-        ? _activeCategoryPage!
-        : _buildHomeScreen(), // home layout
+    _activeCategoryPage != null ? _activeCategoryPage! : _buildHomeScreen(), // home layout
     ProductsPage(),
     SettingsPage(),
   ];
@@ -195,10 +177,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.build_circle_outlined, color: Colors.white70, size: 28),
             onSelected: (value) {
               if (value == 'sync') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SyncItemsPage()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const SyncItemsPage()));
               } else if (value == 'pos') {
                 Navigator.push(
                   context,
@@ -206,17 +185,14 @@ class _HomePageState extends State<HomePage> {
                     builder: (_) => Scaffold(
                       backgroundColor: ColorsUniversal.background,
                       appBar: myAppBar('POS Settings'),
-                      body: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: PosSettingsForm(showSyncButton: false),
-                      ),
+                      body: const Padding(padding: EdgeInsets.all(12), child: PosSettingsForm(showSyncButton: false)),
                     ),
                   ),
                 );
               } else if (value == 'automation') {
                 // Add automation settings page nav
               } else if (value == 'cloud') {
-                // Add cloud settings page nav
+                Navigator.push(context, MaterialPageRoute(builder: (context) => CloudSettings()));
               }
             },
             itemBuilder: (context) => const [
@@ -240,22 +216,13 @@ class _HomePageState extends State<HomePage> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.brown[800], fontSize: 17),
-                        ),
+                        child: Text('Cancel', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                       ),
                       TextButton(
-                        child: Text(
-                          'OK',
-                          style: TextStyle(color: Colors.brown[800], fontSize: 17),
-                        ),
+                        child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                         onPressed: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => UsersPage()),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => UsersPage()));
                         },
                       ),
                     ],
@@ -268,9 +235,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
 
-      body: _selectedProductListPage != null
-          ? _selectedProductListPage!
-          : _screens[_selectedIndex],
+      body: _selectedProductListPage != null ? _selectedProductListPage! : _screens[_selectedIndex],
       bottomNavigationBar: ConvexAppBar(
         backgroundColor: ColorsUniversal.fillWids,
         activeColor: ColorsUniversal.buttonsColor,

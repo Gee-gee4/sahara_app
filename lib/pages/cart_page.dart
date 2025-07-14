@@ -280,6 +280,7 @@ class _CartPageState extends State<CartPage> {
                           onPressed: () {
                             Navigator.pop(context); // Close dialog
                             Navigator.pop(context); // Go back
+                            CartStorage.clearCart();
                           },
                           child: Text('OK'),
                         ),

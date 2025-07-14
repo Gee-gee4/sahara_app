@@ -116,11 +116,12 @@ SizedBox myButton(
 
 //........................................................................................
 
-AppBar myAppBar(String titleText) {
+AppBar myAppBar(String titleText, {List<Widget>? actions}) {
   return AppBar(
     title: Text(titleText, style: TextStyle(color: Colors.white)),
     centerTitle: true,
     backgroundColor: ColorsUniversal.appBarColor,
     iconTheme: const IconThemeData(color: Colors.white),
+    actions: actions,actionsPadding: EdgeInsets.symmetric(horizontal: 6),
   );
 }

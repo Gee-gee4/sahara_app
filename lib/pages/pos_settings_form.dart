@@ -428,7 +428,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
         ),
         if (isFinalSync)
           Container(
-            color: Colors.black38,
+            color: const Color.fromARGB(73, 0, 0, 0),
             child: Center(
               child: SpinKitCircle(
                 size: 70,

@@ -109,6 +109,14 @@ class CardDetailsPage extends StatelessWidget {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: ColorsUniversal.buttonsColor,
+        child: Icon(Icons.print,color: Colors.white,)
+      ),
+
+      // Position the FAB properly
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

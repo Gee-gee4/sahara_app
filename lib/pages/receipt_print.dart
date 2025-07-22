@@ -31,7 +31,7 @@ class ReceiptPrint extends StatelessWidget {
     final double change = cashGiven - totalAmount;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Receipt', style: TextStyle(color: Colors.white70)),
+        title: const Text('Sale Receipt', style: TextStyle(color: Colors.white70)),
         centerTitle: true,
         backgroundColor: ColorsUniversal.appBarColor,
         leading: IconButton(
@@ -112,6 +112,14 @@ class ReceiptPrint extends StatelessWidget {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: ColorsUniversal.buttonsColor,
+        child: Icon(Icons.print,color: Colors.white,)
+      ),
+
+      // Position the FAB properly
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

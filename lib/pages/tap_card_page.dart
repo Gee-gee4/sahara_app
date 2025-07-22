@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:http/http.dart' as http;
 import 'package:sahara_app/helpers/uid_converter.dart';
 import 'package:sahara_app/models/customer_account_details_model.dart';
@@ -26,14 +27,12 @@ class TapCardPage extends StatefulWidget {
   State<TapCardPage> createState() => _TapCardPageState();
 }
 
-bool isProcessing = false;
-String result = '';
-
 class _TapCardPageState extends State<TapCardPage> {
+  bool isProcessing = false;
+  String result = '';
   @override
   void initState() {
     super.initState();
-    // Don't call functions here - let the button handle it
     switch (widget.action) {
       case TapCardAction.initialize:
         result = "Initialize card";
@@ -43,6 +42,11 @@ class _TapCardPageState extends State<TapCardPage> {
         break;
       case TapCardAction.viewUID:
         result = "Card UID";
+        // Auto-start UID scanning with timeout
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _autoViewUID(context);
+        });
+
         break;
       case TapCardAction.changePin:
         result = "Change card PIN";
@@ -620,16 +624,22 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const AlertDialog(
-          title: Text("Scanning..."),
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Expanded(child: Text("Hold card near device")),
-            ],
+        builder: (_) =>Center(
+            child: SpinKitCircle(
+              size: 70,
+              duration: Duration(milliseconds: 1000),
+              itemBuilder: (context, index) {
+                final colors = [
+                  ColorsUniversal.buttonsColor,
+                  ColorsUniversal.fillWids,
+                ];
+                final color = colors[index % colors.length];
+                return DecoratedBox(
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                );
+              },
+            ),
           ),
-        ),
       );
 
       // Poll for card
@@ -656,14 +666,6 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
                 Text(': $posUID', style: TextStyle(fontSize: 20, color: Colors.black54)),
               ],
             ),
-            //  Column(
-            //   mainAxisSize: MainAxisSize.min,
-            //   children: [
-            //     Text("App Format (Hex): $appUID"),
-            //     const SizedBox(height: 8),
-            //     Text("POS Format (Decimal): $posUID"),
-            //   ],
-            // ),
             actions: [
               TextButton(
                 onPressed: () {
@@ -685,7 +687,8 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
           context: context,
           builder: (_) => AlertDialog(
             title: const Text("Error"),
-            content: Text("Failed to read card: $e"),
+            content: Text("Failed to read card uid"),
+            //Text("Failed to read card: $e"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -697,6 +700,108 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       }
     }
   }
+
+  void _autoViewUID(BuildContext context) async {
+  try {
+    // Show scanning dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+            child: SpinKitCircle(
+              size: 70,
+              duration: Duration(milliseconds: 1000),
+              itemBuilder: (context, index) {
+                final colors = [
+                  ColorsUniversal.buttonsColor,
+                  ColorsUniversal.fillWids,
+                ];
+                final color = colors[index % colors.length];
+                return DecoratedBox(
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                );
+              },
+            ),
+          ),
+    );
+
+    // Create timeout
+    final cardScanFuture = FlutterNfcKit.poll();
+    final timeoutFuture = Future.delayed(const Duration(seconds: 30));
+
+    final scanResult = await Future.any([
+      cardScanFuture.then((tag) => {'type': 'success', 'data': tag}),
+      timeoutFuture.then((_) => {'type': 'timeout'}),
+    ]);
+
+    // Close scanning dialog
+    if (context.mounted) Navigator.of(context).pop();
+
+    if (scanResult['type'] == 'timeout') {
+      showDialog(
+        context: context,
+        builder: (_) => const AlertDialog(
+          title: Text("Timeout"),
+          content: Text("⏱️ Scan timeout\nTap the button below to try again"),
+        ),
+      );
+      return;
+    }
+
+    final tag = scanResult['data'] as NFCTag;
+    final appUID = tag.id;
+    final posUID = UIDConverter.convertToPOSFormat(appUID);
+
+    await FlutterNfcKit.finish();
+
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Card Identifier"),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('UID', style: TextStyle(fontSize: 20, color: Colors.black54)),
+              Text(': $posUID', style: TextStyle(fontSize: 20, color: Colors.black54)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop(); // Close the page
+              },
+              child: Text("OK", style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
+            ),
+          ],
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) Navigator.of(context).pop(); // close any open scanning dialog
+
+    await FlutterNfcKit.finish();
+
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Error"),
+          content: Text("❌ Error reading card: $e"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("OK", style: TextStyle(fontSize: 20, color: ColorsUniversal.buttonsColor)),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -722,12 +827,14 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
                     Expanded(
                       // This takes all available space except what the button needs
                       child: SingleChildScrollView(
-                        child: Text(result, style: const TextStyle(fontStyle: FontStyle.italic,fontSize: 14, color: Colors.black87)),
+                        child: Text(
+                          result,
+                          style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 14, color: Colors.black87),
+                        ),
                       ),
                     ),
                     Padding(
-                      // Replace SizedBox with Padding for better control
-                      padding: const EdgeInsets.only(bottom: 12,left: 8,right: 8),
+                      padding: const EdgeInsets.only(bottom: 12, left: 8, right: 8),
                       child: myButton(
                         context,
                         () async {
@@ -739,7 +846,13 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
                               formatCard();
                               break;
                             case TapCardAction.viewUID:
-                              viewUID(context);
+                              if (result.contains("timeout") || result.contains("Error")) {
+                                // If there was a timeout or error, try again
+                                _autoViewUID(context);
+                              } else {
+                                // If successful, show the dialog version
+                                viewUID(context);
+                              }
                               break;
                             case TapCardAction.changePin:
                               changeCardPIN();
@@ -767,7 +880,7 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
                                   return;
                                 }
 
-                               final accountNo = response.data.replaceAll(RegExp(r'[^0-9]'), '');
+                                final accountNo = response.data.replaceAll(RegExp(r'[^0-9]'), '');
 
                                 print("🎯 Account number read from card: $accountNo");
 

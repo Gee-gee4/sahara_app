@@ -38,4 +38,31 @@ class InitializeCardService {
       return null;
     }
   }
+
+/// Format card via API using GET - removes assignment from portal
+static Future<bool> formatCardAPI({
+  required String cardUID,
+  required int staffId,
+}) async {
+   final base = await baseUrl;
+   if (base == null) return false;
+  final url = Uri.parse('$base/CardFormat/$cardUID/$staffId'); // ✅ Use base instead
+  
+  try {
+    print('📡 Formatting card via API: $url');
+    final response = await http.get(url); 
+    
+    print('📡 Format API response: ${response.statusCode}');
+    if (response.statusCode == 200) {
+      print('✅ Card unassigned from portal successfully');
+      return true;
+    } else {
+      print('❌ API format failed: ${response.body}');
+      return false;
+    }
+  } catch (e) {
+    print('❌ Error calling format API: $e');
+    return false;
+  }
+}
 }

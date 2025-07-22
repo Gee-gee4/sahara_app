@@ -117,7 +117,7 @@ class _ProductsPageState extends State<ProductsPage> {
                       itemCount: _filteredProducts.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: .9,
+                        childAspectRatio: .84,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
                       ),
@@ -146,107 +146,120 @@ class _ProductsPageState extends State<ProductsPage> {
                                     style: TextStyle(color: Colors.brown[400], fontWeight: FontWeight.w500),
                                   ),
                                 SizedBox(height: 6),
-                                myButton(context, () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      final controller = TextEditingController();
-                                      // ignore: no_leading_underscores_for_local_identifiers
-                                      PrdtAmtQty _sellMode = PrdtAmtQty.amount;
-                                      return StatefulBuilder(
-                                        builder: (context, setState) {
-                                          return AlertDialog(
-                                            backgroundColor: ColorsUniversal.background,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                            title: Text(product.productName),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Expanded(
-                                                      child: RadioListTile(
-                                                        activeColor: ColorsUniversal.buttonsColor,
-                                                        contentPadding: EdgeInsets.zero,
-                                                        title: Text('Amount'),
-                                                        value: PrdtAmtQty.amount,
-                                                        groupValue: _sellMode,
-                                                        onChanged: (value) => setState(() => _sellMode = value!),
+                                myButton(
+                                  context,
+                                  () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        final controller = TextEditingController();
+                                        // ignore: no_leading_underscores_for_local_identifiers
+                                        PrdtAmtQty _sellMode = PrdtAmtQty.amount;
+                                        return StatefulBuilder(
+                                          builder: (context, setState) {
+                                            return AlertDialog(
+                                              backgroundColor: ColorsUniversal.background,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                              title: Text(product.productName),
+                                              content: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Row(
+                                                          children: [
+                                                            Radio(
+                                                              value: PrdtAmtQty.amount,
+                                                              groupValue: _sellMode,
+                                                              onChanged: (value) => setState(() => _sellMode = value!),
+                                                              activeColor: ColorsUniversal.buttonsColor,
+                                                            ),
+                                                            const SizedBox(width: 8),
+                                                            Text('Amount', style: TextStyle(fontSize: 14)),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Expanded(
-                                                      child: RadioListTile(
-                                                        activeColor: ColorsUniversal.buttonsColor,
-                                                        contentPadding: EdgeInsets.zero,
-                                                        title: Text('Quantity'),
-                                                        value: PrdtAmtQty.quantity,
-                                                        groupValue: _sellMode,
-                                                        onChanged: (value) => setState(() => _sellMode = value!),
+                                                      Expanded(
+                                                        child: Row(
+                                                          children: [
+                                                            Radio(
+                                                              value: PrdtAmtQty.quantity,
+                                                              groupValue: _sellMode,
+                                                              onChanged: (value) => setState(() => _sellMode = value!),
+                                                              activeColor: ColorsUniversal.buttonsColor,
+                                                            ),
+                                                            const SizedBox(width: 8),
+                                                            Text('Quantity', style: TextStyle(fontSize: 14)),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                TextField(
-                                                  controller: controller,
-                                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                                  decoration: InputDecoration(
-                                                    labelText: _sellMode == PrdtAmtQty.amount
-                                                        ? 'Enter Amount'
-                                                        : 'Enter Quantity',
-                                                    labelStyle: TextStyle(color: Colors.brown[300]),
-                                                    focusedBorder: UnderlineInputBorder(
-                                                      borderSide: BorderSide(
-                                                        color: ColorsUniversal.buttonsColor,
-                                                      ), // Focus border color
-                                                    ),
+                                                    ],
                                                   ),
-                                                  cursorColor: ColorsUniversal.buttonsColor,
-                                                  style: TextStyle(color: ColorsUniversal.buttonsColor),
+                                                  TextField(
+                                                    controller: controller,
+                                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                                    decoration: InputDecoration(
+                                                      labelText: _sellMode == PrdtAmtQty.amount
+                                                          ? 'Enter Amount'
+                                                          : 'Enter Quantity',
+                                                      labelStyle: TextStyle(color: Colors.brown[300]),
+                                                      focusedBorder: UnderlineInputBorder(
+                                                        borderSide: BorderSide(
+                                                          color: ColorsUniversal.buttonsColor,
+                                                        ), // Focus border color
+                                                      ),
+                                                    ),
+                                                    cursorColor: ColorsUniversal.buttonsColor,
+                                                    style: TextStyle(color: ColorsUniversal.buttonsColor),
+                                                  ),
+                                                ],
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context),
+                                                  child: Text(
+                                                    'Cancel',
+                                                    style: TextStyle(color: ColorsUniversal.buttonsColor),
+                                                  ),
+                                                ),
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: ColorsUniversal.buttonsColor,
+                                                  ),
+                                                  onPressed: () {
+                                                    final input = double.tryParse(controller.text);
+                                                    if (input == null || input <= 0) {
+                                                      return;
+                                                    }
+                                                    final pricePerUnit = variation!.productVariationPrice;
+                                                    double quantity = _sellMode == PrdtAmtQty.amount
+                                                        ? input / pricePerUnit
+                                                        : input;
+
+                                                    CartStorage.addToCart(product.productName, pricePerUnit, quantity);
+                                                    Navigator.pop(context);
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('${product.productName} added to cart'),
+                                                        duration: Duration(milliseconds: 800),
+                                                        backgroundColor: hexToColor('8f9c68'),
+                                                        behavior: SnackBarBehavior.floating,
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Text('Submit', style: TextStyle(color: Colors.white)),
                                                 ),
                                               ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(context),
-                                                child: Text(
-                                                  'Cancel',
-                                                  style: TextStyle(color: ColorsUniversal.buttonsColor),
-                                                ),
-                                              ),
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: ColorsUniversal.buttonsColor,
-                                                ),
-                                                onPressed: () {
-                                                  final input = double.tryParse(controller.text);
-                                                  if (input == null || input <= 0) {
-                                                    return;
-                                                  }
-                                                  final pricePerUnit = variation!.productVariationPrice;
-                                                  double quantity = _sellMode == PrdtAmtQty.amount
-                                                      ? input / pricePerUnit
-                                                      : input;
-
-                                                  CartStorage.addToCart(product.productName, pricePerUnit, quantity);
-                                                  Navigator.pop(context);
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('${product.productName} added to cart'),
-                                                      duration: Duration(milliseconds: 800),
-                                                      backgroundColor: hexToColor('8f9c68'),
-                                                      behavior: SnackBarBehavior.floating,
-                                                    ),
-                                                  );
-                                                },
-                                                child: Text('Submit',style: TextStyle(color: Colors.white),),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                    },
-                                  );
-                                }, 'ADD TO CART'),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
+                                  'ADD TO CART',
+                                  buttonTextStyle: TextStyle(fontSize: 12, color: Colors.white),
+                                ),
                               ],
                             ),
                           ),

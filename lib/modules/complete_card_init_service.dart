@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,4 +33,35 @@ class CompleteCardInitService {
       return null;
     }
   }
+  static Future<bool> completeInitializeCard({
+  required String uid,
+  required int accountNo,
+  required int staffId,
+}) async {
+  final root = await baseUrl;
+  if (root == null) return false;
+  
+final url = Uri.parse('$root/CompleteCardTagInitialize'); // ✅ Correct endpoint
+  
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        "uid": uid,
+        "accountNo": accountNo,
+        "staffId": staffId,
+        "createdOn": DateTime.now().toIso8601String(),
+      }),
+    );
+    
+    print('📡 Complete initialization response: ${response.statusCode}');
+    return response.statusCode == 200;
+  } catch (e) {
+    print('❌ Error completing initialization: $e');
+    return false;
+  }
+}
 }

@@ -487,7 +487,7 @@ class _NfcCardInitState extends State<NfcCardInit> {
       result = "🔐 Preparing to change PIN...";
     });
 
-    // Step 1: Show PIN change dialog
+    //  Show PIN change dialog
     Map<String, String>? pinData = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {

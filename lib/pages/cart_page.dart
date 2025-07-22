@@ -104,7 +104,7 @@ class _CartPageState extends State<CartPage> {
                           children: [
                             // Product name & price - give it a fixed or max width
                             SizedBox(
-                              width: 100,
+                              width: 90,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,7 +163,7 @@ class _CartPageState extends State<CartPage> {
                             SizedBox(width: 5),
                             // Amount & delete – fixed width
                             SizedBox(
-                              width: 120,
+                              width: 80,
                               child: Column(
                                 // crossAxisAlignment: CrossAxisAlignment.end,
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -227,7 +227,7 @@ class _CartPageState extends State<CartPage> {
                     enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: hexToColor('8f9c68'), width: 2), // selected border
+                      borderSide: BorderSide(color: ColorsUniversal.buttonsColor, width: 2), // selected border
                     ),
                   ),
                   items: paymentModes.map((mode) {

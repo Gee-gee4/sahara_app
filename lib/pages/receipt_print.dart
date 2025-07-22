@@ -46,67 +46,69 @@ class ReceiptPrint extends StatelessWidget {
           },
         ),
       ),
-      body: Center(
-        child: Container(
-          width: 300,
-          padding: const EdgeInsets.all(12),
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Text('SAHARA FCS', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              const Center(child: Text('CMB Station')),
-              const SizedBox(height: 8),
-              const Center(
-                child: Text('SALE', style: TextStyle(decoration: TextDecoration.underline)),
-              ),
-              const SizedBox(height: 8),
-              Text('TERM# 8458cn34e3kf343', style: receiptStyle),
-              Text('REF# TR45739547549219', style: receiptStyle),
-
-              Divider(),
-
-              Text('Prod    Price  Qty  Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              ...cartItems.map((item) => Text(formatProductLine(item), style: receiptStyle)),
-
-              Divider(),
-
-              _row('Sub Total', totalAmount.toStringAsFixed(2), receiptStyle),
-              _row('Total', totalAmount.toStringAsFixed(2), receiptStyle),
-              _row('Net Total', totalAmount.toStringAsFixed(2), receiptStyle),
-
-              Divider(),
-
-              _row('Cash', cashGiven.toStringAsFixed(2), receiptStyle), // We'll inject real amount below
-              _row('Change', change.toStringAsFixed(2), receiptStyle),
-
-              Divider(),
-
-              _row('Date', DateTime.now().toString().substring(0, 19), receiptStyle),
-              Text('Served By $user', style: receiptStyle),
-
-              Divider(),
-
-              const Center(
-                child: Text('APPROVAL', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              const Center(child: Text('Cardholder acknowledges receipt')),
-              const Center(child: Text('of goods/services in the amount')),
-              const Center(child: Text('shown above.')),
-
-              const SizedBox(height: 10),
-              const Center(child: Text('Cardholder Signature')),
-              const SizedBox(height: 4),
-              const Center(
-                child: Text('THANK YOU', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              const Center(child: Text('CUSTOMER COPY')),
-              const SizedBox(height: 4),
-              const Center(child: Text('Powered by Sahara FCS', style: TextStyle(fontSize: 11))),
-            ],
+      body: SingleChildScrollView(
+        child: Center(
+          child: Container(
+            width: 300,
+            padding: const EdgeInsets.all(12),
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: Text('SAHARA FCS', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const Center(child: Text('CMB Station')),
+                const SizedBox(height: 8),
+                const Center(
+                  child: Text('SALE', style: TextStyle(decoration: TextDecoration.underline)),
+                ),
+                const SizedBox(height: 8),
+                Text('TERM# 8458cn34e3kf343', style: receiptStyle),
+                Text('REF# TR45739547549219', style: receiptStyle),
+        
+                Divider(),
+        
+                Text('Prod    Price  Qty  Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                ...cartItems.map((item) => Text(formatProductLine(item), style: receiptStyle)),
+        
+                Divider(),
+        
+                _row('Sub Total', totalAmount.toStringAsFixed(2), receiptStyle),
+                _row('Total', totalAmount.toStringAsFixed(2), receiptStyle),
+                _row('Net Total', totalAmount.toStringAsFixed(2), receiptStyle),
+        
+                Divider(),
+        
+                _row('Cash', cashGiven.toStringAsFixed(2), receiptStyle), // We'll inject real amount below
+                _row('Change', change.toStringAsFixed(2), receiptStyle),
+        
+                Divider(),
+        
+                _row('Date', DateTime.now().toString().substring(0, 19), receiptStyle),
+                Text('Served By ${user.staffName}', style: receiptStyle),
+        
+                Divider(),
+        
+                const Center(
+                  child: Text('APPROVAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const Center(child: Text('Cardholder acknowledges receipt')),
+                const Center(child: Text('of goods/services in the amount')),
+                const Center(child: Text('shown above.')),
+        
+                const SizedBox(height: 10),
+                const Center(child: Text('Cardholder Signature')),
+                const SizedBox(height: 4),
+                const Center(
+                  child: Text('THANK YOU', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const Center(child: Text('CUSTOMER COPY')),
+                const SizedBox(height: 4),
+                const Center(child: Text('Powered by Sahara FCS', style: TextStyle(fontSize: 11))),
+              ],
+            ),
           ),
         ),
       ),

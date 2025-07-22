@@ -427,23 +427,20 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
           ],
         ),
         if (isFinalSync)
-          Container(
-            color: const Color.fromARGB(73, 0, 0, 0),
-            child: Center(
-              child: SpinKitCircle(
-                size: 70,
-                duration: Duration(milliseconds: 1000),
-                itemBuilder: (context, index) {
-                  final colors = [
-                    ColorsUniversal.buttonsColor,
-                    ColorsUniversal.fillWids,
-                  ];
-                  final color = colors[index % colors.length];
-                  return DecoratedBox(
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                  );
-                },
-              ),
+          Center(
+            child: SpinKitCircle(
+              size: 70,
+              duration: Duration(milliseconds: 1000),
+              itemBuilder: (context, index) {
+                final colors = [
+                  ColorsUniversal.buttonsColor,
+                  ColorsUniversal.fillWids,
+                ];
+                final color = colors[index % colors.length];
+                return DecoratedBox(
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                );
+              },
             ),
           ),
       ],

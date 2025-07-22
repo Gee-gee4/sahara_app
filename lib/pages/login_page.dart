@@ -73,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
 
               // Check against the invalid model instead of null
               if (matchedUser.staffId != -1) {
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(user: widget.username)));
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(user: matchedUser)));
               } else {
                 showDialog(
                   context: context,

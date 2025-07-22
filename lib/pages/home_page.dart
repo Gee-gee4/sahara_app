@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/cart_page.dart';
 import 'package:sahara_app/pages/cloud_settings.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
@@ -16,7 +17,7 @@ import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
-  final String user;
+  final StaffListModel user;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -156,7 +157,7 @@ class _HomePageState extends State<HomePage> {
   List<Widget> get _screens => [
     _activeCategoryPage != null ? _activeCategoryPage! : _buildHomeScreen(), // home layout
     ProductsPage(),
-    SettingsPage(),
+    SettingsPage(user: widget.user,),
   ];
 
   @override
@@ -165,7 +166,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: ColorsUniversal.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text(widget.user, style: TextStyle(color: Colors.white70)),
+        title: Text(widget.user.staffName, style: TextStyle(color: Colors.white70)),
         centerTitle: true,
         backgroundColor: ColorsUniversal.appBarColor,
         iconTheme: IconThemeData(color: Colors.white70),
@@ -263,7 +264,7 @@ class _HomePageState extends State<HomePage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const CartPage()),
+            MaterialPageRoute(builder: (context) =>  CartPage(user:  widget.user,)),
           ).then((_) => setState(() {})); // Refresh when coming back
         },
         backgroundColor: ColorsUniversal.buttonsColor,

@@ -3,12 +3,15 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
+import 'package:sahara_app/pages/receipt_print.dart';
 import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class CartPage extends StatefulWidget {
-  const CartPage({super.key});
+  const CartPage({super.key, required this.user});
+  final StaffListModel user;
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -273,16 +276,105 @@ class _CartPageState extends State<CartPage> {
                     context: context,
                     builder: (context) => AlertDialog(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      title: Text('Checked Out!'),
-                      content: Text('You have checked out using "$selectedPaymentMode".'),
+                      title: Text('Cash', style: TextStyle(fontSize: 22)),
+                      content: Text('Do you have a card?', style: TextStyle(fontSize: 20)),
                       actions: [
                         TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                final TextEditingController _cashController = TextEditingController();
+                                String? errorText;
+                                return StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return AlertDialog(
+                                      title: Text('Amount', style: TextStyle(fontSize: 22)),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TextField(
+                                            controller: _cashController,
+                                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                            decoration: InputDecoration(
+                                              labelText: 'Enter Amount',
+                                              errorText: errorText,
+                                              labelStyle: TextStyle(color: Colors.brown[300]),
+                                              focusedBorder: UnderlineInputBorder(
+                                                borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
+                                              ),
+                                            ),
+                                            cursorColor: ColorsUniversal.buttonsColor,
+                                            style: TextStyle(color: ColorsUniversal.buttonsColor),
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: Text(
+                                            'Cancel',
+                                            style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: ColorsUniversal.buttonsColor,
+                                          ),
+                                          onPressed: () {
+                                            final entered = _cashController.text.trim();
+                                            final total = getTotalPrice();
+
+                                            if (entered.isEmpty) {
+                                              setState(() => errorText = 'Amount is required');
+                                              print("Error text: $errorText");
+                                              return;
+                                            }
+
+                                            final amount = double.tryParse(entered);
+                                            if (amount == null || amount < total) {
+                                              setState(
+                                                () => errorText =
+                                                    'Amount must be at least Ksh ${total.toStringAsFixed(0)}',
+                                              );
+                                              print("Error text: $errorText");
+                                              return;
+                                            }
+
+                                            Navigator.pop(context); // close this dialog
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => ReceiptPrint(
+                                                  user: widget.user,
+                                                  cartItems: cartItems,
+                                                  cashGiven: amount,
+                                                ),
+                                              ),
+                                            );
+                                            // CartStorage.clearCart();
+                                          },
+                                          child: Text('OK', style: TextStyle(color: Colors.white, fontSize: 16)),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          child: Text('NO', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
                           onPressed: () {
                             Navigator.pop(context); // Close dialog
                             Navigator.pop(context); // Go back
                             CartStorage.clearCart();
                           },
-                          child: Text('OK'),
+                          child: Text('YES', style: TextStyle(color: Colors.white, fontSize: 16)),
                         ),
                       ],
                     ),

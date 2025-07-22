@@ -42,6 +42,7 @@ dependencies:
   hive_flutter: 
   path_provider: 
   flutter_spinkit: ^5.2.1
+  flutter_nfc_kit: 
 
 dev_dependencies:
   flutter_test:

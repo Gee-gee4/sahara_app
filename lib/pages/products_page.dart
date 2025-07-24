@@ -237,7 +237,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                                         ? input / pricePerUnit
                                                         : input;
 
-                                                    CartStorage.addToCart(product.productName, pricePerUnit, quantity);
+                                                    CartStorage().addToCart(product.productName, pricePerUnit, quantity);
                                                     Navigator.pop(context);
                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                       SnackBar(

@@ -125,3 +125,24 @@ AppBar myAppBar(String titleText, {List<Widget>? actions}) {
     actions: actions,actionsPadding: EdgeInsets.symmetric(horizontal: 6),
   );
 }
+//..........................................................................................................
+//CHANGE PIN TEXTFIELD
+  TextField myPinTextField(TextEditingController controller, String myLabelText, String myHintText) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      obscureText: true,
+      maxLength: 4,
+      cursorColor: ColorsUniversal.buttonsColor,
+      decoration: InputDecoration(
+        labelText: myLabelText,
+        labelStyle: TextStyle(color: Colors.brown[300]),
+        hintText: myHintText,
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        // border: OutlineInputBorder(),
+        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+        // prefixIcon: Icon(Icons.lock_reset),
+      ),
+    );
+  }
+//..............................................................................................................

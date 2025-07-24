@@ -37,7 +37,7 @@ class ReceiptPrint extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.home, color: Colors.white70),
           onPressed: () {
-            CartStorage.clearCart();
+            CartStorage().clearCart();
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => HomePage(user: user)),

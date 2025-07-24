@@ -22,7 +22,7 @@ class _CartPageState extends State<CartPage> {
   List<String> paymentModes = [];
 
   double getTotalPrice() {
-    return CartStorage.cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+    return CartStorage().cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
   }
 
   @override
@@ -46,7 +46,7 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cartItems = CartStorage.cartItems;
+    final cartItems = CartStorage().cartItems;
     return Scaffold(
       appBar: AppBar(
         title: Text('My Cart', style: TextStyle(color: Colors.white70)),
@@ -58,7 +58,7 @@ class _CartPageState extends State<CartPage> {
             onPressed: () {
               cartItems.isNotEmpty
                   ? setState(() {
-                      CartStorage.clearCart();
+                      CartStorage().clearCart();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           backgroundColor: hexToColor('8f9c68'),
@@ -140,7 +140,7 @@ class _CartPageState extends State<CartPage> {
                                           icon: const Icon(Icons.remove_circle_outline),
                                           onPressed: () {
                                             setState(() {
-                                              CartStorage.decrementQuantity(item.name);
+                                              CartStorage().decrementQuantity(item.name);
                                             });
                                           },
                                         ),
@@ -244,7 +244,7 @@ class _CartPageState extends State<CartPage> {
                 SizedBox(height: 10),
                 myButton(context, () {
                   // 🔒 Check if cart is empty
-                  if (CartStorage.cartItems.isEmpty) {
+                  if (CartStorage().cartItems.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Please add some products to checkout!'),
@@ -353,7 +353,7 @@ class _CartPageState extends State<CartPage> {
                                                 ),
                                               ),
                                             );
-                                            // CartStorage.clearCart();
+                                            // CartStorage().clearCart();
                                           },
                                           child: Text('OK', style: TextStyle(color: Colors.white, fontSize: 16)),
                                         ),
@@ -372,7 +372,7 @@ class _CartPageState extends State<CartPage> {
                           onPressed: () {
                             Navigator.pop(context); // Close dialog
                             Navigator.pop(context); // Go back
-                            CartStorage.clearCart();
+                            CartStorage().clearCart();
                           },
                           child: Text('YES', style: TextStyle(color: Colors.white, fontSize: 16)),
                         ),

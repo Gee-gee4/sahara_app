@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ import 'package:sahara_app/modules/nfc_functions.dart';
 import 'package:sahara_app/pages/card_details_page.dart';
 import 'package:sahara_app/pages/tap_card_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
+import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.user});
@@ -24,6 +26,104 @@ class SettingsPage extends StatefulWidget {
 enum TapCardAction { initialize, format, viewUID, changePin, cardDetails }
 
 class _SettingsPageState extends State<SettingsPage> {
+
+    ///CHANGE PIN FUNCTION
+  void handleChangePin() async {
+    final pinData = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) {
+        final oldPinController = TextEditingController();
+        final newPinController = TextEditingController();
+        final confirmPinController = TextEditingController();
+
+        return AlertDialog(
+          title: const Text('Change Card Pin'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                myPinTextField(oldPinController, 'Current PIN', 'Enter current 4-digit PIN'),
+
+                const SizedBox(height: 5),
+                myPinTextField(newPinController, 'New PIN', 'Enter new 4-digit PIN'),
+
+                const SizedBox(height: 5),
+                myPinTextField(confirmPinController, 'Confirm New PIN', 'Re-enter new PIN'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+            ),
+            TextButton(
+              onPressed: () {
+                String oldPin = oldPinController.text;
+                String newPin = newPinController.text;
+                String confirmPin = confirmPinController.text;
+
+                if (oldPin.length != 4 || newPin.length != 4 || confirmPin.length != 4) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('All PINs must be exactly 4 digits')));
+                  return;
+                }
+
+                if (newPin != confirmPin) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('New PIN and confirmation do not match')));
+                  return;
+                }
+
+                if (oldPin == newPin) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('New PIN must be different from current PIN')));
+                  return;
+                }
+
+                Navigator.of(context).pop({'oldPin': oldPin, 'newPin': newPin});
+              },
+              child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (pinData != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TapCardPage(
+            user: widget.user,
+            action: TapCardAction.changePin,
+            extraData: pinData, // Pass the PINs to the next page
+          ),
+        ),
+      );
+    }
+  }
+
+
+    //CHECK NETWORK FOR INITIALIZATION
+    // ignore: unused_element
+    Future<bool> _checkInternetConnection() async {
+  try {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    
+    // Check if connected to WiFi or Mobile data
+    if (connectivityResult == ConnectivityResult.none) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     final List<String> cardItems = ['Card Details', 'Initialize Card', 'Format Card', 'Card UID', 'Change Card Pin'];
@@ -42,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
           MaterialPageRoute(
             builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.cardDetails),
           ),
-        ); 
+        );
       },
       'Initialize Card': () {
         Navigator.push(
@@ -52,14 +152,41 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
       },
-      'Format Card': () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.format),
+      'Format Card': () async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Card Formating'),
+            content: const Text(
+              'Formating will erase all the user data on the card.\n\n'
+              'Are you sure you wish to proceed with formatting card?',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 18)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: Text('PROCEED', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+              ),
+            ],
           ),
         );
+
+        // Only proceed if confirmed
+        if (confirmed == true) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.format),
+            ),
+          );
+        }
       },
+
       'Card UID': () {
         Navigator.push(
           context,
@@ -68,14 +195,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
       },
-      'Change Card Pin': () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.changePin),
-          ),
-        );
-      },
+      'Change Card Pin': () => handleChangePin(),
     };
 
     return Scaffold(
@@ -116,42 +236,56 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-  
+        /**
+         * 'Initialize Card': () async {
+        bool hasInternet = await _checkInternetConnection();
 
-        // final accountNo = '34904103'; // Later: get from card
-        // final deviceId = '044ba7ee5cdd86c5'; // Later: from SharedPreferences
+        if (!hasInternet) {
+          // Show snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('Check your internet connection', style: TextStyle(fontSize: 16))),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Retry the initialization
+                  _checkInternetConnection().then((hasNet) {
+                    if (hasNet) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.initialize),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Still no internet connection'), backgroundColor: Colors.red),
+                      );
+                    }
+                  });
+                },
+              ),
+            ),
+          );
+          return;
+        }
 
-        // print("📡 Fetching account details for $accountNo...");
-
-        // final details = await fetchCustomerAccountDetails(accountNo: accountNo, deviceId: deviceId);
-
-        // if (details == null) {
-        //   print("❌ Could not fetch details.");
-        //   return;
-        // }
-
-        // print("✅ Account Details:");
-        // print("👤 Customer Name: ${details.customerName}");
-        // print("🪪 Mask: ${details.mask ?? 'N/A'}");
-        // print("📄 Agreement Type: ${details.agreementTypeName}");
-        // print("📝 Description: ${details.description}");
-        // print("💳 Credit Type: ${details.accountCreditTypeName}");
-        // print("💰 Balance: ${details.customerAccountBalance.toStringAsFixed(2)}");
-        // print("✅ Active: ${details.customerIsActive ? 'Yes' : 'No'}");
-        // print("⏰ Start Time: ${details.startTime}");
-        // print("⏳ End Time: ${details.endTime}");
-        // print("🔁 Frequency: ${details.frequecy} ${details.frequencyPeriod ?? ''}");
-        // print("🔁 Frequency: ${details.frequencyPeriod} ${details.frequencyPeriod ?? ''}");
-        // print("🔁 Frequency: ${details.dateToFuel} ${details.frequencyPeriod ?? ''}");
-
-        // print("🛒 Products:");
-        // for (final p in details.products) {
-        //   print(
-        //     "  • ${p.productVariationName} "
-        //     "(${p.productCategoryName}) - "
-        //     "${p.productPrice.toStringAsFixed(2)} KES "
-        //     "(Discount: ${p.productDiscount.toStringAsFixed(2)} KES)",
-        //   );
-        // }
-
-        
+        // Internet available - proceed
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.initialize),
+          ),
+        );
+      },
+         */

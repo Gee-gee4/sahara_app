@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class CartItem {
   final String name;
   final double unitPrice;
@@ -6,19 +8,28 @@ class CartItem {
   CartItem({required this.name, required this.unitPrice, required this.quantity});
 }
 
-class CartStorage {
-  static final List<CartItem> cartItems = [];
+class CartStorage extends ChangeNotifier {
+  static CartStorage? _cache;
 
-  static void addToCart(String name, double unitPrice, double quantity) {
+  CartStorage._();
+
+  factory CartStorage(){
+    _cache ??= CartStorage._();
+    return _cache!;
+  }
+  final List<CartItem> cartItems = [];
+
+  void addToCart(String name, double unitPrice, double quantity) {
     final index = cartItems.indexWhere((item) => item.name == name);
     if (index != -1) {
       cartItems[index].quantity += quantity;
     } else {
       cartItems.add(CartItem(name: name, unitPrice: unitPrice, quantity: quantity));
     }
+    notifyListeners();
   }
 
-  static void updateQuantity(String name, double newQuantity) {
+  void updateQuantity(String name, double newQuantity) {
     final index = cartItems.indexWhere((item) => item.name == name);
     if (index != -1) {
       if (newQuantity < 1) {
@@ -26,11 +37,13 @@ class CartStorage {
       } else {
         cartItems[index].quantity = newQuantity;
       }
+      notifyListeners();
     }
   }
 
-  static void clearCart() {
+  void clearCart() {
     cartItems.clear();
+    notifyListeners();
   }
 
   // static void decrementQuantity(String name) {
@@ -43,7 +56,7 @@ class CartStorage {
   //     }
   //   }
   // }
-  static void decrementQuantity(String name) {
+  void decrementQuantity(String name) {
     final index = cartItems.indexWhere((item) => item.name == name);
     if (index != -1) {
       final item = cartItems[index];
@@ -66,6 +79,7 @@ class CartStorage {
           // and don’t remove
         }
       }
+      notifyListeners();
     }
   }
 }

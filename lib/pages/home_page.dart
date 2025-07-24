@@ -108,6 +108,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  final CartStorage cartStorage = CartStorage();
+
   ProductListPage? _selectedProductListPage;
   ProductListPage? _activeCategoryPage;
 
@@ -120,6 +122,13 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadCategoriesFromHive();
     _searchController.addListener(_filterCategories);
+    cartStorage.addListener((){
+      if (mounted) {
+        setState(() {
+          
+        });
+      }
+    });
   }
 
   void _loadCategoriesFromHive() {
@@ -269,8 +278,8 @@ class _HomePageState extends State<HomePage> {
         },
         backgroundColor: ColorsUniversal.buttonsColor,
         child: Badge(
-          isLabelVisible: CartStorage.cartItems.isNotEmpty,
-          label: Text('${CartStorage.cartItems.length}'),
+          isLabelVisible: cartStorage.cartItems.isNotEmpty,
+          label: Text('${cartStorage.cartItems.length}'),
           offset: Offset(9, -9),
           backgroundColor: ColorsUniversal.appBarColor,
           child: const Icon(Icons.shopping_cart, color: Colors.white70),

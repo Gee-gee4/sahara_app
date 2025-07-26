@@ -193,7 +193,9 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                         receiptCount: receiptCount,
                         printPolicies: _printPolicies,
                       );
-                      final deviceId = '044ba7ee5cdd86c5';
+                      final deviceId = '7265998e924b3f54';
+                      // await DeviceIdHelper.debugDeviceIds();
+                      print('📱 Device ID: $deviceId');
 
                       // Fetch channel details by device ID
                       final channel = await ChannelService.fetchChannelByDeviceId(
@@ -374,6 +376,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                           ),
                         );
                       } else {
+                        print('📱 Device ID: $deviceId');
                         // Show error if device not registered
                         if (rootContext.mounted) {
                           showDialog(
@@ -406,6 +409,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       }
                     } catch (e) {
                       if (rootContext.mounted) Navigator.pop(rootContext);
+                      if (rootContext.mounted) Navigator.pop(rootContext);
                       print('❌ Error in POS setup: $e');
                     } finally {
                       setState(() => isSyncing = false);
@@ -433,6 +437,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
               duration: Duration(milliseconds: 1000),
               itemBuilder: (context, index) {
                 final colors = [
+                  ColorsUniversal.buttonsColor,
                   ColorsUniversal.buttonsColor,
                   ColorsUniversal.fillWids,
                 ];

@@ -1,54 +1,711 @@
 // ignore_for_file: avoid_print
 
-import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/helpers/uid_converter.dart';
 import 'package:sahara_app/models/customer_account_details_model.dart';
+import 'package:sahara_app/models/product_card_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/modules/complete_card_init_service.dart';
 import 'package:sahara_app/modules/customer_account_details_service.dart';
 import 'package:sahara_app/modules/initialize_card_service.dart';
 import 'package:sahara_app/modules/nfc_functions.dart';
 import 'package:sahara_app/pages/card_details_page.dart';
+import 'package:sahara_app/pages/receipt_print.dart';
 import 'package:sahara_app/pages/settings_page.dart';
+import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TapCardPage extends StatefulWidget {
-  const TapCardPage({super.key, required this.user, required this.action, this.extraData});
+  const TapCardPage({super.key, required this.user, required this.action, this.extraData, this.cartItems});
   final StaffListModel user;
   final TapCardAction action;
   final Map<String, String>? extraData;
+  final List<CartItem>? cartItems;
 
   @override
   State<TapCardPage> createState() => _TapCardPageState();
 }
 
 class _TapCardPageState extends State<TapCardPage> {
-
-void showLoadingSpinner(BuildContext context) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => Center(
-      child: SpinKitCircle(
-        size: 70,
-        duration: Duration(milliseconds: 1000),
-        itemBuilder: (context, index) {
-          final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-          return DecoratedBox(
-            decoration: BoxDecoration(color: colors[index % colors.length], shape: BoxShape.circle),
-          );
-        },
+  void showLoadingSpinner(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: SpinKitCircle(
+          size: 70,
+          duration: Duration(milliseconds: 1000),
+          itemBuilder: (context, index) {
+            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+            return DecoratedBox(
+              decoration: BoxDecoration(color: colors[index % colors.length], shape: BoxShape.circle),
+            );
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  Future<void> _handleCardSale(BuildContext context) async {
+    final nfc = NfcFunctions();
+
+    showLoadingSpinner(context); // Shows the spinner
+
+    try {
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 8));
+      // ignore: unused_local_variable
+      final cardUID = UIDConverter.convertToPOSFormat(tag.id);
+
+      // Step 1: Try to read account number from card
+      final accountResult = await nfc.readSectorBlock(sectorIndex: 1, blockSectorIndex: 0, useDefaultKeys: false);
+
+      // Step 2: Check if account read was successful
+      if (accountResult.status != NfcMessageStatus.success) {
+        if (context.mounted) Navigator.pop(context); // Hide spinner
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card data. Please try again.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return; // STOP - Do not proceed
+      }
+
+      // Step 3: Extract and validate account number
+      final accountNo = accountResult.data.replaceAll(RegExp(r'[^0-9]'), '');
+
+      // Check if account number is valid (not empty, null, or 0)
+      if (accountNo.isEmpty || accountNo == '0') {
+        if (context.mounted) Navigator.pop(context); // Hide spinner
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card data. Please try again.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return; // STOP - Do not proceed
+      }
+
+      // Step 4: Try to read PIN from card
+      final pinResult = await nfc.readSectorBlock(sectorIndex: 2, blockSectorIndex: 0, useDefaultKeys: false);
+
+      // Step 5: Check if PIN read was successful
+      if (pinResult.status != NfcMessageStatus.success) {
+        if (context.mounted) Navigator.pop(context); // Hide spinner
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card data. Please try again.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return; // STOP - Do not proceed
+      }
+
+      // Step 6: Fetch customer account details
+      final accountData = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
+        accountNo: accountNo,
+        deviceId: '044ba7ee5cdd86c5',
+      );
+
+      // Step 7: Check if customer data was found
+      if (accountData == null) {
+        if (context.mounted) Navigator.pop(context); // Hide spinner
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card data. Please try again.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return; // STOP - Do not proceed
+      }
+
+      // Step 8: All validations passed - proceed with sale
+      if (context.mounted) Navigator.pop(context); // Hide spinner
+
+      _promptCashAmount(context, accountData, accountResult.data.trim(), pinResult.data.trim());
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context); // Hide spinner
+
+      // Show the same error message for any exception
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not read card data. Please try again.'),
+          backgroundColor: Colors.grey,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } finally {
+      await FlutterNfcKit.finish();
+    }
+  }
+
+  void _promptCashAmount(BuildContext context, CustomerAccountDetailsModel? account, String accountNumber, String pin) {
+    final TextEditingController _controller = TextEditingController();
+    String? error;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: ColorsUniversal.background,
+              title: Text('Custom Amount', style: TextStyle(fontWeight: FontWeight.w500)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Amount Due:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                      Text('Ksh ${CartStorage().getTotalPrice().toStringAsFixed(2)}', style: TextStyle(fontSize: 18)),
+                    ],
+                  ),
+                  TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    cursorColor: ColorsUniversal.buttonsColor,
+                    // style: TextStyle(color: ColorsUniversal.buttonsColor),
+                    decoration: InputDecoration(
+                      hintText: 'Enter Amount Received',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      errorText: error,
+                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  },
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+                  child: Text('OK', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  onPressed: () async {
+                    final entered = _controller.text.trim();
+                    final amount = double.tryParse(entered);
+
+                    if (amount == null || amount < CartStorage().getTotalPrice()) {
+                      setState(() => error = 'Amount must be ≥ ${CartStorage().getTotalPrice().toStringAsFixed(0)}');
+                      return;
+                    }
+                    final prefs = await SharedPreferences.getInstance();
+                    final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
+                    final channelName = prefs.getString('channelName') ?? 'CMB Station';
+                    Navigator.pop(context); // close the dialog
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReceiptPrint(
+                          showCardDetails: true,
+                          user: widget.user,
+                          cartItems: widget.cartItems!,
+                          cashGiven: amount,
+                          customerName: account?.customerName ?? 'N/A',
+                          card: account?.mask ?? 'N/A',
+                          accountType: account?.agreementDescription ?? 'N/A',
+                          vehicleNumber: (account?.equipmentMask != null && account!.equipmentMask!.isNotEmpty)
+                              ? account.equipmentMask!.join(', ')
+                              : 'No Equipment',
+                          companyName: companyName,
+                          channelName: channelName,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// CARD ONLY SALE
+  //  _handleOnlyCardSales method
+  Future<void> _handleOnlyCardSales() async {
+    showLoadingSpinner(context);
+
+    try {
+      // Step 1: Scan card with timeout
+      // ignore: unused_local_variable
+      final tag = await FlutterNfcKit.poll().timeout(
+        Duration(seconds: 8),
+        onTimeout: () {
+          throw TimeoutException('Card not detected within 8 seconds');
+        },
+      );
+
+      final nfc = NfcFunctions();
+
+      // Step 2: Read account number from card
+      final accountResult = await nfc.readSectorBlock(sectorIndex: 1, blockSectorIndex: 0, useDefaultKeys: false);
+
+      if (accountResult.status != NfcMessageStatus.success) {
+        Navigator.of(context).pop(); // Close spinner
+        _showErrorMessage('Could not read card data. Please try again.');
+        return;
+      }
+
+      // Step 3: Extract and validate account number
+      final accountNo = accountResult.data.replaceAll(RegExp(r'[^0-9]'), '');
+      if (accountNo.isEmpty || accountNo == '0') {
+        Navigator.of(context).pop(); // Close spinner
+        _showErrorMessage('No account assigned to this card.');
+        return;
+      }
+
+      // Step 4: Read PIN from card - SIMPLIFIED cleaning (match working code)
+      final pinResult = await nfc.readSectorBlock(sectorIndex: 2, blockSectorIndex: 0, useDefaultKeys: false);
+
+      if (pinResult.status != NfcMessageStatus.success) {
+        Navigator.of(context).pop(); // Close spinner
+        _showErrorMessage('Could not read card PIN. Please try again.');
+        return;
+      }
+
+      // SIMPLIFIED: Use same PIN cleaning as working card details
+      final cardPin = pinResult.data.replaceAll(';', '').trim();
+
+      // DEBUG: Print PIN information (same as working code)
+      print("🎯 Account number from card: $accountNo");
+      print("🔐 PIN from card: $cardPin");
+
+      // Step 5: Fetch customer account details
+      final accountData = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
+        accountNo: accountNo,
+        deviceId: '7265998e924b3f54',
+      );
+
+      if (accountData == null) {
+        Navigator.of(context).pop(); // Close spinner
+        _showErrorMessage('Account details not found.');
+        return;
+      }
+
+      Navigator.of(context).pop(); // Close spinner
+
+      // Step 6: Calculate totals using ONLY client pricing
+      final clientTotal = _calculateClientTotal(accountData.products);
+      final discount = _calculateDiscount(accountData.products);
+      final netTotal = clientTotal - discount;
+
+      // Step 7: Check balance against NET TOTAL
+      if (accountData.customerAccountBalance < netTotal) {
+        _showInsufficientBalanceDialog(accountData, netTotal, clientTotal, discount);
+        return;
+      }
+
+      // Step 8: Handle equipment selection (pass cleaned PIN)
+      if (accountData.equipmentMask != null && accountData.equipmentMask!.isNotEmpty) {
+        _showEquipmentDialog(accountData, cardPin, discount, netTotal, clientTotal);
+      } else {
+        _showCardPinDialog(accountData, cardPin, discount, netTotal, clientTotal, 'No Equipment');
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // Close spinner
+      if (e is TimeoutException) {
+        _showTimeoutDialog();
+      } else {
+        _showErrorMessage('Error reading card: ${e.toString()}');
+      }
+    } finally {
+      await FlutterNfcKit.finish();
+    }
+  }
+
+  // / 2. CORRECTED: Calculate discount using client pricing and cart quantities
+  double _calculateDiscount(List<ProductCardDetailsModel> accountProducts) {
+    double totalDiscount = 0;
+
+    for (var cartItem in CartStorage().cartItems) {
+      // Find matching product in account
+      final accountProduct = accountProducts.firstWhere(
+        (p) => p.productVariationId == cartItem.productId,
+        orElse: () => ProductCardDetailsModel(
+          productVariationId: 0,
+          productVariationName: '',
+          productCategoryId: 0,
+          productCategoryName: '',
+          productPrice: 0,
+          productDiscount: 0,
+        ),
+      );
+
+      if (accountProduct.productVariationId != 0) {
+        // Calculate discount: Discount per Litre × Cart Quantity
+        final discountPerLitre = accountProduct.productDiscount;
+        final quantity = cartItem.quantity; // Use actual cart quantity
+
+        totalDiscount += discountPerLitre * quantity;
+
+        print("Discount for ${cartItem.name}: $discountPerLitre × $quantity = ${discountPerLitre * quantity}");
+      }
+    }
+
+    return totalDiscount;
+  }
+
+  // 1. CORRECTED: Calculate client total using ONLY client pricing (ignore cart total)
+  double _calculateClientTotal(List<ProductCardDetailsModel> accountProducts) {
+    double clientTotal = 0;
+
+    for (var cartItem in CartStorage().cartItems) {
+      // Find matching product in account
+      final accountProduct = accountProducts.firstWhere(
+        (p) => p.productVariationId == cartItem.productId,
+        orElse: () => ProductCardDetailsModel(
+          productVariationId: 0,
+          productVariationName: '',
+          productCategoryId: 0,
+          productCategoryName: '',
+          productPrice: 0,
+          productDiscount: 0,
+        ),
+      );
+
+      if (accountProduct.productVariationId != 0) {
+        // Use ONLY client's price and cart quantity (ignore station price completely)
+        final clientPrice = accountProduct.productPrice;
+        final quantity = cartItem.quantity; // Use actual cart quantity
+
+        clientTotal += clientPrice * quantity;
+
+        print("Product: ${cartItem.name}");
+        print("Cart Quantity: $quantity, Client Price: $clientPrice");
+        print("Product Total: ${clientPrice * quantity}");
+      } else {
+        // If product not found in account, use original pricing as fallback
+        clientTotal += cartItem.unitPrice * cartItem.quantity;
+        print("Product ${cartItem.name} not found in account - using station price");
+      }
+    }
+
+    return clientTotal;
+  }
+
+  // Show error message
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.grey, duration: Duration(seconds: 2)));
+  }
+
+  // Show timeout dialog
+  void _showTimeoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("Card Timeout"),
+        content: Text("No card detected. Please try again."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Go back to previous page
+            },
+            child: Text("OK", style: TextStyle(color: ColorsUniversal.buttonsColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show insufficient balance dialog
+  void _showInsufficientBalanceDialog(
+    CustomerAccountDetailsModel account,
+    double netTotal,
+    double clientTotal,
+    double discount,
+  ) {
+    // ignore: unused_local_variable
+    final shortage = netTotal - account.customerAccountBalance;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("Insufficient Balance"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Customer: ${account.customerName}'),
+              SizedBox(height: 16),
+              _infoRow('Available Balance:', 'Ksh ${account.customerAccountBalance.toStringAsFixed(2)}'),
+              // Divider(),
+              // _infoRow('Total:', 'Ksh ${clientTotal.toStringAsFixed(2)}'),
+              // _infoRow('Discount:', 'Ksh ${discount.toStringAsFixed(2)}'),
+              // _infoRow('Net Amount:', 'Ksh ${netTotal.toStringAsFixed(2)}', isBold: true),
+              // Divider(),
+              // _infoRow('Shortage:', 'Ksh ${shortage.toStringAsFixed(2)}', color: Colors.red, isBold: true),
+              // SizedBox(height: 16),
+              SizedBox(height: 16),
+              Text(
+                'Please top up your account or reduce the purchase amount.',
+                style: TextStyle(color: ColorsUniversal.buttonsColor),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              // Text(
+              //   'Custom pricing applied per your agreement',
+              //   style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+              //   textAlign: TextAlign.center,
+              // ),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Go back to previous page
+            },
+            child: Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show equipment selection dialog
+  void _showEquipmentDialog(
+    CustomerAccountDetailsModel account,
+    String cardPin,
+    double discount,
+    double netTotal,
+    double clientTotal,
+  ) {
+    String? selectedEquipment;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Select Equipment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Customer: ${account.customerName}'),
+              SizedBox(height: 16),
+              Text('Available Equipment:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: selectedEquipment,
+                hint: Text('Select Equipment'),
+                items: (account.equipmentMask ?? []).map((mask) {
+                  return DropdownMenuItem<String>(value: mask, child: Text(mask));
+                }).toList(),
+
+                onChanged: (value) {
+                  setState(() {
+                    selectedEquipment = value;
+                  });
+                },
+              ),
+
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+                child: Column(
+                  children: [
+                    _infoRow('Total:', 'Ksh ${clientTotal.toStringAsFixed(2)}'),
+                    _infoRow('Discount:', 'Ksh ${discount.toStringAsFixed(2)}'),
+                    Divider(height: 8),
+                    _infoRow('Net Total:', 'Ksh ${netTotal.toStringAsFixed(2)}', isBold: true),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous page
+              },
+              child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+            ),
+            ElevatedButton(
+              onPressed: selectedEquipment == null
+                  ? null
+                  : () {
+                      Navigator.of(context).pop(); // Close equipment dialog
+                      _showCardPinDialog(account, cardPin, discount, netTotal, clientTotal, selectedEquipment!);
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+              child: Text('Continue', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Show PIN input dialog
+  void _showCardPinDialog(
+    CustomerAccountDetailsModel account,
+    String cardPin,
+    double discount,
+    double netTotal,
+    double clientTotal,
+    String selectedEquipment,
+  ) {
+    final TextEditingController pinController = TextEditingController();
+    String? pinError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Card Payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Customer: ${account.customerName}'),
+              if (selectedEquipment != 'No Equipment') Text('Vehicle: $selectedEquipment'),
+              SizedBox(height: 16),
+              _infoRow('Balance:', 'Ksh ${account.customerAccountBalance.toStringAsFixed(2)}'),
+              _infoRow('Total:', 'Ksh ${clientTotal.toStringAsFixed(2)}'),
+              _infoRow('Discount:', 'Ksh ${discount.toStringAsFixed(2)}'),
+              Divider(),
+              _infoRow('Net Total:', 'Ksh ${netTotal.toStringAsFixed(2)}', isBold: true),
+              SizedBox(height: 16),
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                decoration: InputDecoration(
+                  hintText: 'Enter PIN',
+                  errorText: pinError,
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous page
+              },
+              child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+              onPressed: () async {
+                final enteredPin = pinController.text.trim();
+
+                // SIMPLIFIED: Match working card details validation
+                print("Card PIN: '$cardPin'");
+                print("Entered PIN: '$enteredPin'");
+
+                // Validate PIN
+                if (enteredPin.isEmpty) {
+                  setState(() => pinError = 'PIN cannot be empty');
+                  return;
+                }
+
+                if (enteredPin.length != 4) {
+                  setState(() => pinError = 'PIN must be 4 digits');
+                  return;
+                }
+
+                // SIMPLIFIED: Direct comparison like working code
+                if (enteredPin != cardPin) {
+                  setState(() => pinError = 'Incorrect PIN. Try again.');
+                  return;
+                }
+                // PIN is correct, go to receipt
+
+                final prefs = await SharedPreferences.getInstance();
+                final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
+                final channelName = prefs.getString('channelName') ?? 'CMB Station';
+
+                Navigator.of(context).pop(); // Close PIN dialog
+                Navigator.of(context).pop(); // Go back to main page
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ReceiptPrint(
+                      user: widget.user,
+                      cartItems: CartStorage().cartItems,
+                      cashGiven: netTotal,
+                      customerName: account.customerName,
+                      card: account.cardMask ?? account.mask ?? '',
+                      accountType: account.accountCreditTypeName,
+                      vehicleNumber: selectedEquipment,
+                      showCardDetails: true,
+                      discount: discount,
+                      clientTotal: clientTotal,
+                      customerBalance: account.customerAccountBalance,
+                      accountProducts: account.products,
+                      companyName: companyName,
+                      channelName: channelName,
+                    ),
+                  ),
+                );
+              },
+              child: Text('Pay', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper widget for info rows
+  Widget _infoRow(String label, String value, {bool isBold = false, Color? color}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color,fontSize: 16),
+          ),
+          Text(
+            value,
+            style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color,fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
 
   bool isProcessing = false;
   String result = '';
@@ -70,9 +727,8 @@ void showLoadingSpinner(BuildContext context) {
         break;
       case TapCardAction.viewUID:
         result = "Card UID";
-        // Auto-start UID scanning with timeout
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _autoViewUID(context);
+          viewUID(context);
         });
 
         break;
@@ -87,6 +743,19 @@ void showLoadingSpinner(BuildContext context) {
         result = "Card details";
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _handleCardDetails(context); //  Auto-start card details scan
+        });
+        break;
+      case TapCardAction.cashCardSales:
+        result = "Scanning card for sale...";
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleCardSale(context);
+        });
+
+      case TapCardAction.cardSales:
+        result = "Card sales";
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleOnlyCardSales();
+          //function
         });
         break;
     }
@@ -104,12 +773,18 @@ void showLoadingSpinner(BuildContext context) {
 
     final nfc = NfcFunctions();
     showLoadingSpinner(context);
+    bool shouldDismissSpinner = true;
 
     try {
       setState(() => result = "📱 Waiting for card...\nPlace your card on the phone");
 
-      // Step 1: Poll for card
-      final tag = await FlutterNfcKit.poll();
+      // Step 1: Poll for card with timeout
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
       if (tag.type != NFCTagType.mifare_classic) {
         setState(() {
           result = "❌ Not a MIFARE Classic card";
@@ -146,7 +821,7 @@ void showLoadingSpinner(BuildContext context) {
           String pin = pinResult.data.replaceAll(';', '').trim();
 
           // Fetch customer details for this account
-          final imei = 'd66e5cf98b2ae46c';
+          final imei = '7265998e924b3f54';
           final staffId = widget.user.staffId;
 
           final accountData = await InitializeCardService.fetchCardData(
@@ -168,11 +843,17 @@ void showLoadingSpinner(BuildContext context) {
             isProcessing = false;
           });
 
+          if (!mounted) return;
+
+          // Dismiss spinner before showing dialog
+          Navigator.of(context).pop();
+          shouldDismissSpinner = false;
+
           // Show dialog
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => AlertDialog(
+            builder: (BuildContext dialogContext) => AlertDialog(
               title: Text('Card Already Initialized', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
               content: Text(
                 'Account: $accountNumber\n'
@@ -183,8 +864,8 @@ void showLoadingSpinner(BuildContext context) {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); //pop the dialog
-                    Navigator.of(context).pop(); //pop the page
+                    Navigator.of(dialogContext).pop(); // Pop the dialog
+                    if (mounted) Navigator.of(context).pop(); // Then pop the page
                   },
                   child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
                 ),
@@ -229,17 +910,23 @@ void showLoadingSpinner(BuildContext context) {
           isProcessing = false;
         });
 
+        if (!mounted) return;
+
+        // Dismiss spinner before showing dialog
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => AlertDialog(
+          builder: (BuildContext dialogContext) => AlertDialog(
             title: const Text('Failed'),
             content: const Text('Could not find the associated account number', style: TextStyle(fontSize: 16)),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); //Pop the dialog
-                  Navigator.of(context).pop(); //Pop the page
+                  Navigator.of(dialogContext).pop(); // Pop the dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop the page
                 },
                 child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
               ),
@@ -257,10 +944,16 @@ void showLoadingSpinner(BuildContext context) {
             "✅ Account found: ${accountData.customerAccountNumber}\n\n👤 Customer: ${accountData.customerName}\n\n🔐 Please set a PIN for this card...",
       );
 
+      if (!mounted) return;
+
+      // Dismiss spinner before showing dialog
+      Navigator.of(context).pop();
+      shouldDismissSpinner = false;
+
       String? pin = await showDialog<String>(
         context: context,
         barrierDismissible: false,
-        builder: (context) {
+        builder: (BuildContext dialogContext) {
           final controller = TextEditingController();
           return AlertDialog(
             title: const Text('Set Pin'),
@@ -272,9 +965,13 @@ void showLoadingSpinner(BuildContext context) {
                 SizedBox(height: 3),
                 Row(
                   children: [
-                    Text(
-                      'Customer Name: ${accountData.customerName}\nAccount: ${accountData.customerAccountNumber}',
-                      style: TextStyle(fontSize: 16),
+                    Flexible(
+                      child: Text(
+                        'Customer Name: ${accountData.customerName}\nAccount: ${accountData.customerAccountNumber}',
+                        style: TextStyle(fontSize: 16),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -289,19 +986,20 @@ void showLoadingSpinner(BuildContext context) {
                     border: OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
                   ),
+                  cursorColor: ColorsUniversal.buttonsColor,
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); //pop dialog
-                  Navigator.of(context).pop(); //pop page
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop page
                 },
                 child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
               ),
               TextButton(
-                onPressed: () => Navigator.of(context).pop(controller.text),
+                onPressed: () => Navigator.of(dialogContext).pop(controller.text),
                 child: Text('Set PIN', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
               ),
             ],
@@ -317,10 +1015,19 @@ void showLoadingSpinner(BuildContext context) {
         return;
       }
 
-      // Start new session for writing
+      // Show spinner again for the writing process
+      if (mounted) showLoadingSpinner(context);
+      shouldDismissSpinner = true;
+
+      // Start new session for writing with timeout
       setState(() => result = "📱 Ready to write data...\nPlace your card on the phone again");
 
-      final tag2 = await FlutterNfcKit.poll();
+      final tag2 = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
       if (tag2.type != NFCTagType.mifare_classic) {
         setState(() {
           result = "❌ Not a MIFARE Classic card";
@@ -426,148 +1133,250 @@ ${completed ? '✅ Portal updated successfully!' : '⚠️ Portal update failed 
 🏪 POS UID: $convertedUID''';
         isProcessing = false;
       });
+
+      // Success! Dismiss spinner and show success snackbar, then pop page
+      if (mounted) {
+        Navigator.of(context).pop(); // Dismiss spinner
+        shouldDismissSpinner = false;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Card initialized successfully'),
+            // for ${accountData.customerName}!
+            backgroundColor: hexToColor('8f9c68'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        Navigator.of(context).pop(); // Pop the page
+      }
     } catch (e) {
       await FlutterNfcKit.finish();
+
+      // Handle timeout specifically
+      if (e is TimeoutException) {
+        setState(() {
+          result = "⏰ Timeout: No card detected";
+          isProcessing = false;
+        });
+
+        if (!mounted) return;
+
+        // Dismiss spinner before showing dialog
+        if (shouldDismissSpinner) {
+          Navigator.of(context).pop();
+          shouldDismissSpinner = false;
+        }
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text('Timeout'),
+            content: const Text('No card detected. Please try again.', style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop the dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop the page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       setState(() {
         result = "❌ Initialization failed:\n$e";
         isProcessing = false;
       });
+    } finally {
+      // Ensure spinner is dismissed if still showing
+      if (shouldDismissSpinner && mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (e) {
+          // Spinner might already be dismissed
+        }
+      }
     }
   }
 
   //FORMAT CARD
   Future<void> formatCard() async {
-  if (isProcessing || !mounted) return;
+    if (isProcessing || !mounted) return;
 
-  setState(() => isProcessing = true);
-  showLoadingSpinner(context);
+    setState(() => isProcessing = true);
+    showLoadingSpinner(context);
+    bool shouldDismissSpinner = true;
 
-  try {
-    // Wait for card scan or timeout
-    final scanResult = await Future.any([
-      FlutterNfcKit.poll().then((tag) => {'type': 'success', 'data': tag}),
-      Future.delayed(Duration(seconds: 30)).then((_) => {'type': 'timeout'}),
-    ]);
-
-    if (!mounted) return;
-    Navigator.of(context).pop(); // Close spinner
-
-    if (scanResult['type'] == 'timeout') {
-      await showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("Timeout"),
-          content: Text("⏱️ No card detected. Please try again."),
-        ),
+    try {
+      // Wait for card scan with timeout
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
       );
-      setState(() => isProcessing = false);
-      return;
-    }
 
-    final tag = scanResult['data'] as NFCTag;
-    final rawUID = tag.id;
+      final rawUID = tag.id;
 
-    if (tag.type != NFCTagType.mifare_classic) {
-      await FlutterNfcKit.finish();
-      setState(() => isProcessing = false);
-      await showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("Invalid Card"),
-          content: Text("❌ Not a MIFARE Classic card."),
-        ),
-      );
-      return;
-    }
+      if (tag.type != NFCTagType.mifare_classic) {
+        await FlutterNfcKit.finish();
+        setState(() => isProcessing = false);
 
-    final nfc = NfcFunctions();
-    List<String> formatResults = [];
+        if (!mounted) return;
 
-    for (int sector in [1, 2]) {
-      bool formatted = false;
-      try {
-        final res = await nfc.formatSector(sectorIndex: sector, useDefaultKeys: false);
-        if (res.status == NfcMessageStatus.success) {
-          formatResults.add("✅ Sector $sector: ${res.data}");
-          formatted = true;
-        }
-      } catch (_) {}
+        // Dismiss spinner before showing dialog
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
 
-      if (!formatted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text("Invalid Card"),
+            content: const Text("❌ Not a MIFARE Classic card.", style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop the dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop the page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final nfc = NfcFunctions();
+      List<String> formatResults = [];
+
+      for (int sector in [1, 2]) {
+        bool formatted = false;
         try {
-          final res = await nfc.formatSector(sectorIndex: sector, useDefaultKeys: true);
+          final res = await nfc.formatSector(sectorIndex: sector, useDefaultKeys: false);
           if (res.status == NfcMessageStatus.success) {
             formatResults.add("✅ Sector $sector: ${res.data}");
-          } else {
-            formatResults.add("❌ Sector $sector: ${res.data}");
+            formatted = true;
           }
-        } catch (e) {
-          formatResults.add("❌ Sector $sector: Error - $e");
+        } catch (_) {}
+
+        if (!formatted) {
+          try {
+            final res = await nfc.formatSector(sectorIndex: sector, useDefaultKeys: true);
+            if (res.status == NfcMessageStatus.success) {
+              formatResults.add("✅ Sector $sector: ${res.data}");
+            } else {
+              formatResults.add("❌ Sector $sector: ${res.data}");
+            }
+          } catch (e) {
+            formatResults.add("❌ Sector $sector: Error - $e");
+          }
         }
       }
-    }
 
-    await FlutterNfcKit.finish();
+      await FlutterNfcKit.finish();
 
-    final convertedUID = UIDConverter.convertToPOSFormat(rawUID);
-    final staffId = widget.user.staffId;
-    final apiSuccess = await InitializeCardService.formatCardAPI(
-      cardUID: convertedUID,
-      staffId: staffId,
-    );
+      final convertedUID = UIDConverter.convertToPOSFormat(rawUID);
+      final staffId = widget.user.staffId;
+      final apiSuccess = await InitializeCardService.formatCardAPI(cardUID: convertedUID, staffId: staffId);
+      print('$apiSuccess');
 
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("🎉 Format Complete"),
-        content: Text('''
-${formatResults.join('\n')}
+      if (!mounted) return;
 
-🔓 All keys reset to default (FF FF FF FF FF FF)
-💳 Card ready for new assignment
+      // Success! Dismiss spinner and show success snackbar, then pop page
+      Navigator.of(context).pop(); // Dismiss spinner
+      shouldDismissSpinner = false;
 
-${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unassignment failed (card still formatted)'}
-        '''),
-      ),
-    );
-  } on PlatformException catch (e) {
-    if (mounted) Navigator.of(context).pop();
-    await FlutterNfcKit.finish();
-
-    // Handle NFC timeout or other platform exceptions
-    if (e.code == '408') {
-      await showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("Timeout"),
-          content: Text("⏱️ No card detected. Please try again."),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: SizedBox(
+            height: 22,
+            child: Text(
+              'Card formatted successfully.\n',
+              // '${apiSuccess ? '✅ Portal unassigned successfully' : '⚠️ Portal unassignment failed (card still formatted)'}',
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+          backgroundColor: hexToColor('8f9c68'),
+          duration: Duration(seconds: 2),
         ),
       );
-    } else {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Format Failed"),
-          content: Text("❌ Format failed:\n${e.message ?? e.toString()}"),
+      // Pop the page immediately
+      Navigator.of(context).pop();
+    } catch (e) {
+      await FlutterNfcKit.finish();
+
+      // Handle timeout specifically
+      if (e is TimeoutException) {
+        setState(() => isProcessing = false);
+
+        if (!mounted) return;
+
+        // Dismiss spinner before showing dialog
+        if (shouldDismissSpinner) {
+          Navigator.of(context).pop();
+          shouldDismissSpinner = false;
+        }
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text('Timeout'),
+            content: const Text('No card detected. Please try again.', style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop the dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop the page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Handle other errors
+      setState(() => isProcessing = false);
+
+      if (!mounted) return;
+
+      // Dismiss spinner before showing snackbar
+      if (shouldDismissSpinner) {
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+      }
+
+      print('Format error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: SizedBox(height: 22, child: Text('Format failed: ${e.toString()}', style: TextStyle(fontSize: 16))),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.fixed,
         ),
       );
+      Navigator.of(context).pop(); // Pop the page
+    } finally {
+      // Ensure spinner is dismissed if still showing
+      if (shouldDismissSpinner && mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (e) {
+          // Spinner might already be dismissed
+        }
+      }
+      if (mounted) setState(() => isProcessing = false);
     }
-  } catch (e) {
-    if (mounted) Navigator.of(context).pop();
-    await FlutterNfcKit.finish();
-
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Format Failed"),
-        content: Text("❌ Unexpected error:\n$e"),
-      ),
-    );
-  } finally {
-    if (mounted) setState(() => isProcessing = false);
   }
-}
-
 
   //CHANGE PIN
   //CHANGE CARD PIN
@@ -588,6 +1397,8 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       result = "🔐 Preparing to change PIN...";
     });
 
+    bool shouldDismissSpinner = true;
+
     try {
       // Show loading spinner
       showDialog(
@@ -607,34 +1418,45 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
         ),
       );
 
-      final tagScan = FlutterNfcKit.poll();
-      final timeout = Future.delayed(Duration(seconds: 30));
-      final scanResult = await Future.any([
-        tagScan.then((tag) => {'type': 'success', 'tag': tag}),
-        timeout.then((_) => {'type': 'timeout'}),
-      ]);
-
-      Navigator.of(context).pop(); // Close loading
-
-      if (scanResult['type'] == 'timeout') {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) =>
-              const AlertDialog(title: Text("Timeout"), content: Text("⏱️ No card detected. Please try again.")),
-        );
-        setState(() => isProcessing = false);
-        return;
-      }
-
-      final tag = scanResult['tag'] as NFCTag;
+      // Poll for card with timeout
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
 
       if (tag.type != NFCTagType.mifare_classic) {
         await FlutterNfcKit.finish();
+
         setState(() {
           result = "❌ Not a MIFARE Classic card";
           isProcessing = false;
         });
+
+        if (!mounted) return;
+
+        // Dismiss spinner before showing dialog
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text('Invalid Card'),
+            content: const Text('Not a MIFARE Classic card. Please use a valid card.', style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
         return;
       }
 
@@ -654,10 +1476,38 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
 
       if (storedPin != oldPin) {
         await FlutterNfcKit.finish();
+
         setState(() {
           result = "❌ Incorrect current PIN.\nStored: $storedPin\nEntered: $oldPin";
           isProcessing = false;
         });
+
+        if (!mounted) return;
+
+        // Dismiss spinner before showing dialog
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text('Incorrect PIN'),
+            content: const Text(
+              'The current PIN you entered is incorrect. Please try again.',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
         return;
       }
 
@@ -691,40 +1541,123 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
 ''';
         isProcessing = false;
       });
+
+      // Success! Dismiss spinner and show success snackbar, then pop page
+      if (mounted) {
+        Navigator.of(context).pop(); // Dismiss spinner
+        shouldDismissSpinner = false;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PIN changed successfully!'),
+            backgroundColor: hexToColor('8f9c68'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        Navigator.of(context).pop(); // Pop the page
+      }
     } catch (e) {
       await FlutterNfcKit.finish();
+
+      // Handle timeout specifically
+      if (e is TimeoutException) {
+        setState(() {
+          result = "⏰ Timeout: No card detected";
+          isProcessing = false;
+        });
+
+        if (!mounted) return;
+
+        // Dismiss spinner before showing dialog
+        if (shouldDismissSpinner) {
+          Navigator.of(context).pop();
+          shouldDismissSpinner = false;
+        }
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text('Timeout'),
+            content: const Text('No card detected. Please try again.', style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop the dialog
+                  if (mounted) Navigator.of(context).pop(); // Pop the page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Handle other errors
       setState(() {
         result = "❌ PIN change failed: $e";
         isProcessing = false;
       });
+
+      if (!mounted) return;
+
+      // Dismiss spinner before showing snackbar
+      if (shouldDismissSpinner) {
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+      }
+      print(': ${e.toString()}');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PIN change failed, Card may not be assigned'),
+          //: ${e.toString()}
+          backgroundColor: Colors.grey,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      Navigator.of(context).pop(); // Pop the page
+    } finally {
+      // Ensure spinner is dismissed if still showing
+      if (shouldDismissSpinner && mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (e) {
+          // Spinner might already be dismissed
+        }
+      }
     }
   }
 
   /// C A R D  D E T A I L S
-  Future<CustomerAccountDetailsModel?> fetchCustomerAccountDetails({
-    required String accountNo,
-    required String deviceId,
-  }) async {
-    final url = Uri.parse('https://cmb.saharafcs.com/api/CustomerAccountDetails/$accountNo/$deviceId');
+  // Future<CustomerAccountDetailsModel?> fetchCustomerAccountDetails({
+  //   required String accountNo,
+  //   required String deviceId,
+  // }) async {
+  //   final url = Uri.parse('https://cmb.saharafcs.com/api/CustomerAccountDetails/$accountNo/$deviceId');
 
-    try {
-      final response = await http.get(url);
+  //   try {
+  //     final response = await http.get(url);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return CustomerAccountDetailsModel.fromJson(data);
-      } else {
-        print('❌ Failed to fetch account details: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      print('❌ Error fetching customer account details: $e');
-      return null;
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+  //       return CustomerAccountDetailsModel.fromJson(data);
+  //     } else {
+  //       print('❌ Failed to fetch account details: ${response.statusCode}');
+  //       return null;
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error fetching customer account details: $e');
+  //     return null;
+  //   }
+  // }
 
   //C A R D  U I D
   void viewUID(BuildContext context) async {
+    bool shouldDismissSpinner = true;
+
     try {
       // Show loading dialog
       showDialog(
@@ -745,22 +1678,32 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
         ),
       );
 
-      // Poll for card
-      NFCTag tag = await FlutterNfcKit.poll();
+      // Poll for card with timeout
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
 
       // Close loading dialog
-      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+      }
 
       // Get UID
       final appUID = tag.id;
       final posUID = UIDConverter.convertToPOSFormat(appUID);
+
+      await FlutterNfcKit.finish();
 
       // Show result
       if (context.mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => AlertDialog(
+          builder: (BuildContext dialogContext) => AlertDialog(
             title: const Text("Card Identifier"),
             content: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -773,8 +1716,8 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog first
-                  Navigator.of(context).pop(); // Then pop the page below it
+                  Navigator.of(dialogContext).pop(); // Close the dialog first
+                  if (context.mounted) Navigator.of(context).pop(); // Then pop the page
                 },
                 child: Text("OK", style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
               ),
@@ -782,133 +1725,54 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
           ),
         );
       }
-
-      await FlutterNfcKit.finish();
     } catch (e) {
-      if (context.mounted) Navigator.of(context).pop(); // close any open dialogs
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            title: const Text("Error"),
-            content: Text("Failed to read card uid"),
-            //Text("Failed to read card: $e"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); //pop the dialog
-                  Navigator.of(context).pop(); //pop the page
-                },
-                child: Text("OK", style: TextStyle(fontSize: 20, color: ColorsUniversal.buttonsColor)),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
-
-  void _autoViewUID(BuildContext context) async {
-    try {
-      // Show scanning dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => Center(
-          child: SpinKitCircle(
-            size: 70,
-            duration: Duration(milliseconds: 1000),
-            itemBuilder: (context, index) {
-              final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-              final color = colors[index % colors.length];
-              return DecoratedBox(
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              );
-            },
-          ),
-        ),
-      );
-
-      // Create timeout
-      final cardScanFuture = FlutterNfcKit.poll();
-      final timeoutFuture = Future.delayed(const Duration(seconds: 30));
-
-      final scanResult = await Future.any([
-        cardScanFuture.then((tag) => {'type': 'success', 'data': tag}),
-        timeoutFuture.then((_) => {'type': 'timeout'}),
-      ]);
-
-      // Close scanning dialog
-      if (context.mounted) Navigator.of(context).pop();
-
-      if (scanResult['type'] == 'timeout') {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const AlertDialog(
-            title: Text("Timeout"),
-            content: Text("⏱️ Scan timeout\nTap the button below to try again"),
-          ),
-        );
-        return;
-      }
-
-      final tag = scanResult['data'] as NFCTag;
-      final appUID = tag.id;
-      final posUID = UIDConverter.convertToPOSFormat(appUID);
-
       await FlutterNfcKit.finish();
 
+      if (context.mounted && shouldDismissSpinner) {
+        Navigator.of(context).pop(); // Close loading dialog
+        shouldDismissSpinner = false;
+      }
+
       if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            title: const Text("Card Identifier"),
-            content: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('UID', style: TextStyle(fontSize: 20, color: Colors.black54)),
-                Text(': $posUID', style: TextStyle(fontSize: 20, color: Colors.black54)),
+        // Handle timeout specifically
+        if (e is TimeoutException) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) => AlertDialog(
+              title: const Text("Timeout"),
+              content: const Text("No card detected. Please try again.", style: TextStyle(fontSize: 16)),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(); // Pop the dialog
+                    if (context.mounted) Navigator.of(context).pop(); // Pop the page
+                  },
+                  child: Text("OK", style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+                ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                  Navigator.of(context).pop(); // Close the page
-                },
-                child: Text("OK", style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) Navigator.of(context).pop(); // close any open scanning dialog
-
-      await FlutterNfcKit.finish();
-
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            title: const Text("Error"),
-            content: Text("Error reading card"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); //pop the dialog
-                  Navigator.of(context).pop(); //pop the page
-                },
-                child: Text("OK", style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
-              ),
-            ],
-          ),
-        );
+          );
+        } else {
+          // Handle other errors
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) => AlertDialog(
+              title: const Text("Error"),
+              content: const Text("Failed to read card UID", style: TextStyle(fontSize: 16)),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(); // Pop the dialog
+                    if (context.mounted) Navigator.of(context).pop(); // Pop the page
+                  },
+                  child: Text("OK", style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+                ),
+              ],
+            ),
+          );
+        }
         print('❌ Error reading card: $e');
       }
     }
@@ -917,9 +1781,10 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
   /// C A R D  D E T A I L S
   Future<void> _handleCardDetails(BuildContext context) async {
     print("📡 Scanning card for details...");
+    bool shouldDismissSpinner = true;
 
     try {
-      // Step 1: Start NFC polling
+      // Step 1: Start NFC polling with spinner
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -938,34 +1803,15 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
         ),
       );
 
+      // Poll for card with timeout
       // ignore: unused_local_variable
-     NFCTag tag;
-      try {
-        tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 20));
-      } catch (e) {
-        await FlutterNfcKit.finish(); // Stop NFC session
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
 
-        if (context.mounted) Navigator.of(context, rootNavigator: true).pop(); // Hide spinner
-
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Card Not Detected"),
-            content: const Text("No card was detected within 20 seconds. Please try again."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Pop page
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
-
-        return;
-      }
       final nfc = NfcFunctions();
 
       // Step 2: Read account number from card
@@ -977,17 +1823,20 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
 
       if (accountResponse.status != NfcMessageStatus.success) {
         await FlutterNfcKit.finish();
-        if (context.mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // Close spinner
-          Navigator.of(context).pop(); // Close current page
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not read card data. Please try again.'),
-              backgroundColor: Colors.grey,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+
+        if (!context.mounted) return;
+
+        Navigator.of(context).pop(); // Close spinner
+        shouldDismissSpinner = false;
+
+        Navigator.of(context).pop(); // Close current page
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card data. Please try again.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
         print("❌ Failed to read account number: ${accountResponse.data}");
         return;
       }
@@ -1002,7 +1851,11 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       await FlutterNfcKit.finish(); // End NFC session
 
       if (pinResponse.status != NfcMessageStatus.success) {
-        if (context.mounted) Navigator.pop(context); // ❌ Dismiss spinner
+        if (!context.mounted) return;
+
+        Navigator.of(context).pop(); // Dismiss spinner
+        shouldDismissSpinner = false;
+
         print("❌ Failed to read PIN from card: ${pinResponse.data}");
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1023,7 +1876,11 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       print("🔐 PIN from card: $cardPin");
 
       if (accountNo.isEmpty || accountNo == '0') {
-        if (context.mounted) Navigator.pop(context); // ❌ Dismiss spinner
+        if (!context.mounted) return;
+
+        Navigator.of(context).pop(); // Dismiss spinner
+        shouldDismissSpinner = false;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No assigned account found on this card.'),
@@ -1034,19 +1891,25 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
         return;
       }
 
-      // Step 5: Prompt user for PIN and validate
+      // Step 5: Dismiss spinner before showing PIN dialog
+      if (!context.mounted) return;
+
+      Navigator.of(context).pop(); // Dismiss spinner
+      shouldDismissSpinner = false;
+
+      // Prompt user for PIN and validate
       final pinValid = await _showPinDialog(context, accountNo, cardPin);
 
       if (!pinValid) {
-        if (context.mounted) Navigator.pop(context); // ❌ Dismiss spinner
         print("❌ PIN validation failed or was cancelled");
         return;
       }
 
-      // Step 6: PIN is correct! Fetch customer details
+      // Step 6: PIN is correct! Show loading state for API call
       print("✅ PIN verified successfully");
 
-      // Show loading state
+      if (!context.mounted) return;
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -1064,8 +1927,9 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
           ),
         ),
       );
+      shouldDismissSpinner = true;
 
-      final deviceId = '044ba7ee5cdd86c5'; // Eventually get from prefs
+      final deviceId = '7265998e924b3f54'; // Eventually get from prefs
 
       final details = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
@@ -1073,7 +1937,10 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       );
 
       // Close loading dialog
-      if (context.mounted) Navigator.of(context).pop();
+      if (!context.mounted) return;
+
+      Navigator.of(context).pop();
+      shouldDismissSpinner = false;
 
       // Step 7: Check if details were found
       if (details == null) {
@@ -1081,19 +1948,21 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
 
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
             title: const Text('No Details Found'),
             content: Text(
               'Could not find customer details for account: $accountNo\n\n'
               'The account may not exist in the system or there may be a connection issue.',
+              style: TextStyle(fontSize: 16),
             ),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (context.mounted) Navigator.of(context).pop(); // Pop page
                 },
-                child: const Text('OK'),
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
               ),
             ],
           ),
@@ -1112,13 +1981,61 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
       );
     } catch (e) {
       await FlutterNfcKit.finish(); // Always end NFC session
-      if (context.mounted) Navigator.pop(context); // ❌ Dismiss spinner on error
+
+      // Handle timeout specifically
+      if (e is TimeoutException) {
+        if (!context.mounted) return;
+
+        if (shouldDismissSpinner) {
+          Navigator.of(context).pop(); // Dismiss spinner
+          shouldDismissSpinner = false;
+        }
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text("Timeout"),
+            content: const Text("No card detected. Please try again.", style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (context.mounted) Navigator.of(context).pop(); // Pop page
+                },
+                child: Text("OK", style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Handle other errors
+      if (!context.mounted) return;
+
+      if (shouldDismissSpinner) {
+        Navigator.of(context).pop(); // Dismiss spinner
+      }
 
       print("❌ Exception occurred: $e");
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error occurred'), backgroundColor: Colors.grey, duration: const Duration(seconds: 2)),
+        SnackBar(
+          content: Text('Error occurred: ${e.toString()}'),
+          backgroundColor: Colors.grey,
+          duration: const Duration(seconds: 3),
+        ),
       );
+    } finally {
+      // Ensure spinner is dismissed if still showing
+      if (shouldDismissSpinner && context.mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (e) {
+          // Spinner might already be dismissed
+        }
+      }
     }
   }
 
@@ -1133,27 +2050,29 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
         final pinController = TextEditingController();
         return AlertDialog(
           title: const Text('Enter PIN'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Account: $accountNo', style: TextStyle(fontSize: 16)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: pinController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 4,
-                decoration: InputDecoration(
-                  hintText: 'Enter 4-digit PIN',
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
-                  // prefixIcon: Icon(Icons.lock),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Account: $accountNo', style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: pinController,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Enter 4-digit PIN',
+                    border: OutlineInputBorder(),
+                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                    // prefixIcon: Icon(Icons.lock),
+                  ),
+                  autofocus: true,
+                  cursorColor: ColorsUniversal.buttonsColor,
                 ),
-                autofocus: true,
-                cursorColor: ColorsUniversal.buttonsColor,
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -1200,74 +2119,138 @@ ${apiSuccess ? '✅ Portal: Card unassigned successfully' : '⚠️ Portal: Unas
 
     return pinVerified;
   }
+  
+  //SET STATE HELPER
+  void safeSetState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    }
+  }
+
+  void safeShowSnackBar(String message, {Color? backgroundColor}) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: backgroundColor ?? Colors.grey,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void safeNavigatorPop() {
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> safeShowDialog(Widget dialog) async {
+    if (mounted) {
+      await showDialog(context: context, barrierDismissible: false, builder: (context) => dialog);
+    }
+  }
+
+  // Add cancellation support
+  bool _isCancelled = false;
+
+  void cancelOperation() {
+    _isCancelled = true;
+    safeSetState(() => isProcessing = false);
+  }
+
+  bool get shouldContinue => mounted && !_isCancelled;
+
+  // Handle back button press
+  Future<bool> handleBackPress() async {
+    if (isProcessing) {
+      // Cancel any ongoing operation
+      cancelOperation();
+      await FlutterNfcKit.finish(); // Stop NFC
+      return true; // Allow pop
+    }
+    return true; // Allow normal pop
+  }
+  /// END OF SET STATE HELPER
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ColorsUniversal.background,
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            children: [
-              Text(
-                'Hold the Card/Tag at the \nreader and keep it there',
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600, color: Colors.black54),
-              ),
-              RotatedBox(
-                quarterTurns: -2,
-                child: Image.asset('assets/images/nfc_scan.png', fit: BoxFit.fitHeight, height: 300),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(
-                      // This takes all available space except what the button needs
-                      child: SingleChildScrollView(
-                        child: Text(
-                          result,
-                          style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 14, color: Colors.black87),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop && isProcessing) {
+          // If the pop already happened and we were processing, clean up
+          await handleBackPress();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: ColorsUniversal.background,
+        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                Text(
+                  'Hold the Card/Tag at the \nreader and keep it there',
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600, color: Colors.black54),
+                ),
+                RotatedBox(
+                  quarterTurns: -2,
+                  child: Image.asset('assets/images/nfc_scan.png', fit: BoxFit.fitHeight, height: 300),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        // This takes all available space except what the button needs
+                        child: SingleChildScrollView(
+                          child: Text(
+                            // result,
+                            '',
+                            style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 14, color: Colors.black87),
+                          ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12, left: 8, right: 8),
-                      child: myButton(
-                        context,
-                        () async {
-                          switch (widget.action) {
-                            case TapCardAction.initialize:
-                              initializeCard();
-                              break;
-                            case TapCardAction.format:
-                              isProcessing ? null : formatCard();
-                              break;
-                            case TapCardAction.viewUID:
-                              if (result.contains("timeout") || result.contains("Error")) {
-                                // If there was a timeout or error, try again
-                                _autoViewUID(context);
-                              } else {
-                                // If successful, show the dialog version
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12, left: 8, right: 8),
+                        child: myButton(
+                          context,
+                          () async {
+                            switch (widget.action) {
+                              case TapCardAction.initialize:
+                                initializeCard();
+                                break;
+                              case TapCardAction.format:
+                                isProcessing ? null : formatCard();
+                                break;
+                              case TapCardAction.viewUID:
                                 viewUID(context);
-                              }
-                              break;
-                            case TapCardAction.changePin:
-                              isProcessing ? null : changeCardPIN();
-                              break;
-                            case TapCardAction.cardDetails:
-                              await _handleCardDetails(context);
-                              break;
-                          }
-                        },
-                        'TAP AGAIN !',
-                        buttonTextStyle: const TextStyle(fontSize: 25, color: Colors.white70),
+                                break;
+                              case TapCardAction.changePin:
+                                isProcessing ? null : changeCardPIN();
+                                break;
+                              case TapCardAction.cardDetails:
+                                await _handleCardDetails(context);
+                                break;
+                              case TapCardAction.cashCardSales:
+                                await _handleCardSale(context); // <-- Your new handler here
+                                break;
+                              case TapCardAction.cardSales:
+                                // Add handler or leave empty if unused for now
+                                await _handleOnlyCardSales();
+                                break;
+                            }
+                          },
+                          'TAP AGAIN !',
+                          buttonTextStyle: const TextStyle(fontSize: 25, color: Colors.white70),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

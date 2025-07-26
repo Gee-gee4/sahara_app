@@ -23,7 +23,7 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-enum TapCardAction { initialize, format, viewUID, changePin, cardDetails }
+enum TapCardAction { initialize, format, viewUID, changePin, cardDetails,cashCardSales, cardSales }
 
 class _SettingsPageState extends State<SettingsPage> {
 

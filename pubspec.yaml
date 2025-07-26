@@ -36,7 +36,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.3
   http:
-  device_info_plus: 
   convex_bottom_bar: 
   hive: 
   hive_flutter: 
@@ -44,6 +43,7 @@ dependencies:
   flutter_spinkit: ^5.2.1
   flutter_nfc_kit: 
   connectivity_plus: ^6.1.4
+
 
 dev_dependencies:
   flutter_test:

@@ -58,7 +58,7 @@ class CardDetailsPage extends StatelessWidget {
         
                 _row('Customer:', details.customerName, receiptStyle),
                 _row('Card:', details.mask ?? 'N/A', receiptStyle),
-                _row('Agreement:', details.agreementTypeName, receiptStyle),
+                _row('Agreement:', details.agreementDescription, receiptStyle),
                 _row('Account Type:', details.accountCreditTypeName, receiptStyle),
                 _row('Card Balance:', details.customerAccountBalance.toString(), receiptStyle),
                 _row('Status:', details.customerIsActive ? 'Active' : 'Inactive', receiptStyle),

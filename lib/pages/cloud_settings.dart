@@ -100,7 +100,7 @@ class _CloudSettingsState extends State<CloudSettings> {
             ),
             const SizedBox(height: 16),
             myButton(context, _handleCloudSync, 'Save & Sync', isLoading: isSyncing, loadingText: 'Syncing...'),
-          ],
+                      ],
         ),
       ),
     );

@@ -182,6 +182,9 @@ class _ProductListPageState extends State<ProductListPage> {
                                               style: TextStyle(color: ColorsUniversal.buttonsColor),
                                             ),
                                           ),
+
+                                          // Updated ProductListPage - fix the addToCart call
+                                          // Replace your addToCart call with this:
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: ColorsUniversal.buttonsColor,
@@ -196,17 +199,20 @@ class _ProductListPageState extends State<ProductListPage> {
                                                   ? input / pricePerUnit
                                                   : input;
 
-                                              CartStorage().addToCart(product.productName, pricePerUnit, quantity);
+                                              // FIXED: Include productId and correct parameter order
+                                              CartStorage().addToCart(
+                                                variation.productVariationId, // productId (int)
+                                                product.productName, // name (String)
+                                                pricePerUnit, // unitPrice (double)
+                                                quantity, // quantity (double)
+                                              );
+
                                               Navigator.pop(context);
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
                                                   content: Text('${product.productName} added to cart'),
                                                   duration: Duration(milliseconds: 700),
                                                   backgroundColor: hexToColor('8f9c68'),
-                                                  behavior: SnackBarBehavior.floating,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
                                                 ),
                                               );
                                             },

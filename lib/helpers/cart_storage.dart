@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
 class CartItem {
+  final int productId; // Add this for discount matching
   final String name;
   final double unitPrice;
   double quantity;
 
-  CartItem({required this.name, required this.unitPrice, required this.quantity});
+  CartItem({
+    required this.productId, // Add this parameter
+    required this.name, 
+    required this.unitPrice, 
+    required this.quantity,
+  });
 }
 
 class CartStorage extends ChangeNotifier {
@@ -19,18 +25,25 @@ class CartStorage extends ChangeNotifier {
   }
   final List<CartItem> cartItems = [];
 
-  void addToCart(String name, double unitPrice, double quantity) {
-    final index = cartItems.indexWhere((item) => item.name == name);
+  // Update this method to include productId
+  void addToCart(int productId, String name, double unitPrice, double quantity) {
+    final index = cartItems.indexWhere((item) => item.productId == productId);
     if (index != -1) {
       cartItems[index].quantity += quantity;
     } else {
-      cartItems.add(CartItem(name: name, unitPrice: unitPrice, quantity: quantity));
+      cartItems.add(CartItem(
+        productId: productId,
+        name: name, 
+        unitPrice: unitPrice, 
+        quantity: quantity,
+      ));
     }
     notifyListeners();
   }
 
-  void updateQuantity(String name, double newQuantity) {
-    final index = cartItems.indexWhere((item) => item.name == name);
+  // Update this method to use productId for finding items
+  void updateQuantity(int productId, double newQuantity) {
+    final index = cartItems.indexWhere((item) => item.productId == productId);
     if (index != -1) {
       if (newQuantity < 1) {
         cartItems.removeAt(index);
@@ -41,23 +54,9 @@ class CartStorage extends ChangeNotifier {
     }
   }
 
-  void clearCart() {
-    cartItems.clear();
-    notifyListeners();
-  }
-
-  // static void decrementQuantity(String name) {
-  //   final index = cartItems.indexWhere((item) => item.name == name);
-  //   if (index != -1) {
-  //     if (cartItems[index].quantity > 1) {
-  //       cartItems[index].quantity -= 1;
-  //     } else {
-  //       cartItems.removeAt(index);
-  //     }
-  //   }
-  // }
-  void decrementQuantity(String name) {
-    final index = cartItems.indexWhere((item) => item.name == name);
+  // Update this method to use productId
+  void decrementQuantity(int productId,) {
+    final index = cartItems.indexWhere((item) => item.productId == productId);
     if (index != -1) {
       final item = cartItems[index];
 
@@ -76,10 +75,19 @@ class CartStorage extends ChangeNotifier {
           item.quantity -= 1;
         } else {
           // If already <= 1, stop decrementing — don't allow < 1
-          // and don’t remove
+          // and don't remove
         }
       }
       notifyListeners();
     }
+  }
+
+  void clearCart() {
+    cartItems.clear();
+    notifyListeners();
+  }
+
+  double getTotalPrice() {
+    return CartStorage().cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
   }
 }

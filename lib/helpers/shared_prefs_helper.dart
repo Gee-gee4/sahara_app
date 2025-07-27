@@ -26,6 +26,16 @@ class SharedPrefsHelper {
     await prefs.setInt('receiptCount', receiptCount);
     await prefs.setBool('printPolicies', printPolicies);
   }
+
+  static Future<void> saveDeviceId(String deviceId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('deviceId', deviceId);
+  }
+
+  static Future<String?> getDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('deviceId');
+  }
 }
 
 Future<String?> apiUrl() async {

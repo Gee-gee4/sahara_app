@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'package:sahara_app/helpers/uid_converter.dart';
 import 'package:sahara_app/models/customer_account_details_model.dart';
 import 'package:sahara_app/models/product_card_details_model.dart';
@@ -118,7 +119,7 @@ class _TapCardPageState extends State<TapCardPage> {
       // Step 6: Fetch customer account details
       final accountData = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
-        deviceId: '044ba7ee5cdd86c5',
+        deviceId: await getSavedOrFetchDeviceId(),
       );
 
       // Step 7: Check if customer data was found
@@ -298,7 +299,8 @@ class _TapCardPageState extends State<TapCardPage> {
       // Step 5: Fetch customer account details
       final accountData = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
-        deviceId: '7265998e924b3f54',
+
+        deviceId: await getSavedOrFetchDeviceId(),
       );
 
       if (accountData == null) {
@@ -696,11 +698,11 @@ class _TapCardPageState extends State<TapCardPage> {
         children: [
           Text(
             label,
-            style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color,fontSize: 16),
+            style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color, fontSize: 16),
           ),
           Text(
             value,
-            style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color,fontSize: 16),
+            style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color, fontSize: 16),
           ),
         ],
       ),
@@ -1631,29 +1633,6 @@ ${completed ? '✅ Portal updated successfully!' : '⚠️ Portal update failed 
     }
   }
 
-  /// C A R D  D E T A I L S
-  // Future<CustomerAccountDetailsModel?> fetchCustomerAccountDetails({
-  //   required String accountNo,
-  //   required String deviceId,
-  // }) async {
-  //   final url = Uri.parse('https://cmb.saharafcs.com/api/CustomerAccountDetails/$accountNo/$deviceId');
-
-  //   try {
-  //     final response = await http.get(url);
-
-  //     if (response.statusCode == 200) {
-  //       final data = jsonDecode(response.body);
-  //       return CustomerAccountDetailsModel.fromJson(data);
-  //     } else {
-  //       print('❌ Failed to fetch account details: ${response.statusCode}');
-  //       return null;
-  //     }
-  //   } catch (e) {
-  //     print('❌ Error fetching customer account details: $e');
-  //     return null;
-  //   }
-  // }
-
   //C A R D  U I D
   void viewUID(BuildContext context) async {
     bool shouldDismissSpinner = true;
@@ -1929,7 +1908,8 @@ ${completed ? '✅ Portal updated successfully!' : '⚠️ Portal update failed 
       );
       shouldDismissSpinner = true;
 
-      final deviceId = '7265998e924b3f54'; // Eventually get from prefs
+      final deviceId = await getSavedOrFetchDeviceId();
+      print('📱 Device ID used for sync: $deviceId');
 
       final details = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
@@ -2119,7 +2099,7 @@ ${completed ? '✅ Portal updated successfully!' : '⚠️ Portal update failed 
 
     return pinVerified;
   }
-  
+
   //SET STATE HELPER
   void safeSetState(VoidCallback fn) {
     if (mounted) {
@@ -2171,6 +2151,7 @@ ${completed ? '✅ Portal updated successfully!' : '⚠️ Portal update failed 
     }
     return true; // Allow normal pop
   }
+
   /// END OF SET STATE HELPER
 
   @override

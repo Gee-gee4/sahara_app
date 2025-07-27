@@ -1,4 +1,7 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'package:sahara_app/modules/resource_service.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
@@ -16,7 +19,7 @@ class CloudSettings extends StatefulWidget {
 class _CloudSettingsState extends State<CloudSettings> {
   final TextEditingController _urlController = TextEditingController();
   bool isSyncing = false;
-  final String deviceId = '044ba7ee5cdd86c5';
+  
 
   @override
   void initState() {
@@ -50,6 +53,9 @@ class _CloudSettingsState extends State<CloudSettings> {
 
     if (resourceSynced) {
       try {
+        final deviceId = await getSavedOrFetchDeviceId();
+        print('📱 Device ID used for sync: $deviceId');
+
         await fullResourceSync(deviceId: deviceId, context: context);
 
         if (!mounted) return;

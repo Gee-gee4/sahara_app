@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive/hive.dart';
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/modules/channel_service.dart';
 import 'package:sahara_app/modules/payment_mode_service.dart';
@@ -45,10 +46,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
             SpinKitCircle(
               duration: Duration(milliseconds: 1000),
               itemBuilder: (context, index) {
-                final colors = [
-                  ColorsUniversal.buttonsColor,
-                  ColorsUniversal.fillWids,
-                ];
+                final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
                 final color = colors[index % colors.length];
                 return DecoratedBox(
                   decoration: BoxDecoration(color: color, shape: BoxShape.circle),
@@ -73,12 +71,8 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _printPolicies = prefs.getBool('printPolicies') ?? false;
-      _mode = prefs.getString('mode') == 'auto'
-          ? OperationMode.auto
-          : OperationMode.manual;
-      _receipt = (prefs.getInt('receiptCount') ?? 1) == 2
-          ? ReceiptNumber.double
-          : ReceiptNumber.single;
+      _mode = prefs.getString('mode') == 'auto' ? OperationMode.auto : OperationMode.manual;
+      _receipt = (prefs.getInt('receiptCount') ?? 1) == 2 ? ReceiptNumber.double : ReceiptNumber.single;
     });
   }
 
@@ -101,10 +95,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Select Operation Mode',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    const Text('Select Operation Mode', style: TextStyle(fontSize: 16)),
                     RadioListTile(
                       activeColor: ColorsUniversal.buttonsColor,
                       tileColor: Colors.brown[100],
@@ -112,9 +103,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       value: OperationMode.manual,
                       groupValue: _mode,
                       onChanged: (value) => setState(() => _mode = value!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(12)),
                     ),
                     const SizedBox(height: 8),
                     RadioListTile(
@@ -124,9 +113,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       value: OperationMode.auto,
                       groupValue: _mode,
                       onChanged: (value) => setState(() => _mode = value!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(12)),
                     ),
                     const SizedBox(height: 12),
                     const Text('Number of Receipts', style: TextStyle(fontSize: 16)),
@@ -137,9 +124,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       value: ReceiptNumber.single,
                       groupValue: _receipt,
                       onChanged: (value) => setState(() => _receipt = value!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(12)),
                     ),
                     const SizedBox(height: 8),
                     RadioListTile(
@@ -149,9 +134,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       value: ReceiptNumber.double,
                       groupValue: _receipt,
                       onChanged: (value) => setState(() => _receipt = value!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(12)),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -161,8 +144,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                         Switch(
                           activeColor: ColorsUniversal.appBarColor,
                           value: _printPolicies,
-                          onChanged: (value) =>
-                              setState(() => _printPolicies = value),
+                          onChanged: (value) => setState(() => _printPolicies = value),
                         ),
                       ],
                     ),
@@ -182,9 +164,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                     try {
                       // Convert settings to saveable format
-                      final modeString = _mode == OperationMode.manual
-                          ? 'manual'
-                          : 'auto';
+                      final modeString = _mode == OperationMode.manual ? 'manual' : 'auto';
                       final receiptCount = _receipt == ReceiptNumber.single ? 1 : 2;
 
                       // Save POS settings to shared preferences
@@ -193,50 +173,35 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                         receiptCount: receiptCount,
                         printPolicies: _printPolicies,
                       );
-                      final deviceId = '7265998e924b3f54';
-                      // await DeviceIdHelper.debugDeviceIds();
+                      final deviceId = await getSavedOrFetchDeviceId();
                       print('📱 Device ID: $deviceId');
 
                       // Fetch channel details by device ID
-                      final channel = await ChannelService.fetchChannelByDeviceId(
-                        deviceId,
-                      );
+                      final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
 
                       // Fetch accepted payment modes for this device
-                      final acceptedProductModes =
-                          await PaymentModeService.fetchPosAcceptedModesByDevice(
-                            deviceId,
-                          );
+                      final acceptedProductModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
                       print('✅ Accepted payment modes:');
                       for (var mode in acceptedProductModes) {
-                        print(
-                          '  • ${mode.payModeDisplayName} (${mode.payModeCategory})',
-                        );
+                        print('  • ${mode.payModeDisplayName} (${mode.payModeCategory})');
                       }
 
                       // Fetch available redeem rewards
-                      final redeemRewards =
-                          await RedeemRewardsService.fetchRedeemRewards();
+                      final redeemRewards = await RedeemRewardsService.fetchRedeemRewards();
                       print('✅ Redeem rewards found:');
                       for (var reward in redeemRewards) {
-                        print(
-                          '  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})',
-                        );
+                        print('  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})');
                       }
 
                       // Fetch staff list for this station
-                      final staffList = await StaffListService.fetchStaffList(
-                        deviceId,
-                      );
+                      final staffList = await StaffListService.fetchStaffList(deviceId);
                       print('✅ The Staff List is:');
                       for (var staff in staffList) {
                         print('  •${staff.staffName} (${staff.staffPin})');
                       }
 
                       // Fetch product catalog
-                      final productItems = await ProductService.fetchProductItems(
-                        deviceId,
-                      );
+                      final productItems = await ProductService.fetchProductItems(deviceId);
                       // Print product categories and variations
                       print('✅ Product categories fetched:');
                       for (var category in productItems) {
@@ -244,9 +209,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                         for (var product in category.products) {
                           print('   • Product: ${product.productName}');
                           for (var variation in product.productVariations) {
-                            print(
-                              '     - ${variation.productVariationName}: KES ${variation.productVariationPrice}',
-                            );
+                            print('     - ${variation.productVariationName}: KES ${variation.productVariationPrice}');
                           }
                         }
                       }
@@ -267,13 +230,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                             // content: Text('$channel station found. Proceed?'),
                             actions: [
                               TextButton(
-                                child: Text(
-                                  'OK',
-                                  style: TextStyle(
-                                    color: Colors.brown[800],
-                                    fontSize: 17,
-                                  ),
-                                ),
+                                child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                                 onPressed: () async {
                                   // Show progress dialog while saving everything
                                   if (!rootContext.mounted) return;
@@ -282,86 +239,45 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                                   try {
                                     // Save all channel details to shared preferences
-                                    final prefs =
-                                        await SharedPreferences.getInstance();
-                                    await prefs.setString(
-                                      'channelName',
-                                      channel.channelName,
-                                    );
-                                    await prefs.setString(
-                                      'companyName',
-                                      channel.companyName,
-                                    );
-                                    await prefs.setBool(
-                                      'staffAutoLogOff',
-                                      channel.staffAutoLogOff,
-                                    );
-                                    await prefs.setInt(
-                                      'noOfDecimalPlaces',
-                                      channel.noOfDecimalPlaces,
-                                    );
-                                    await prefs.setInt(
-                                      'channelId',
-                                      channel.channelId,
-                                    );
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.setString('channelName', channel.channelName);
+                                    await prefs.setString('companyName', channel.companyName);
+                                    await prefs.setBool('staffAutoLogOff', channel.staffAutoLogOff);
+                                    await prefs.setInt('noOfDecimalPlaces', channel.noOfDecimalPlaces);
+                                    await prefs.setInt('channelId', channel.channelId);
 
                                     // Save payment modes to Hive
                                     final box = Hive.box('payment_modes');
-                                    final modesAsMaps = acceptedProductModes
-                                        .map((mode) => mode.toJson())
-                                        .toList();
+                                    final modesAsMaps = acceptedProductModes.map((mode) => mode.toJson()).toList();
                                     await box.put('acceptedModes', modesAsMaps);
-                                    print(
-                                      '✅ Saved ${modesAsMaps.length} payment modes to Hive',
-                                    );
+                                    print('✅ Saved ${modesAsMaps.length} payment modes to Hive');
 
                                     // Save redeem rewards to Hive
                                     final rewardsBox = Hive.box('redeem_rewards');
-                                    final rewardsAsMaps = redeemRewards
-                                        .map((r) => r.toJson())
-                                        .toList();
-                                    await rewardsBox.put(
-                                      'rewardsList',
-                                      rewardsAsMaps,
-                                    );
-                                    print(
-                                      '✅ Saved ${rewardsAsMaps.length} redeem rewards to Hive',
-                                    );
+                                    final rewardsAsMaps = redeemRewards.map((r) => r.toJson()).toList();
+                                    await rewardsBox.put('rewardsList', rewardsAsMaps);
+                                    print('✅ Saved ${rewardsAsMaps.length} redeem rewards to Hive');
 
                                     // Save staff list to Hive
                                     final staffBox = Hive.box('staff_list');
-                                    final staffAsMaps = staffList
-                                        .map((staff) => staff.toJson())
-                                        .toList();
+                                    final staffAsMaps = staffList.map((staff) => staff.toJson()).toList();
                                     await staffBox.put('staffList', staffAsMaps);
-                                    print(
-                                      '✅ Saved ${staffAsMaps.length} staff records to Hive',
-                                    );
+                                    print('✅ Saved ${staffAsMaps.length} staff records to Hive');
 
                                     // Save products to Hive
                                     final productsBox = Hive.box('products');
-                                    final productsAsMaps = productItems
-                                        .map((p) => p.toJson())
-                                        .toList();
-                                    await productsBox.put(
-                                      'productItems',
-                                      productsAsMaps,
-                                    );
-                                    print(
-                                      '✅ Saved ${productsAsMaps.length} product categories to Hive',
-                                    );
+                                    final productsAsMaps = productItems.map((p) => p.toJson()).toList();
+                                    await productsBox.put('productItems', productsAsMaps);
+                                    print('✅ Saved ${productsAsMaps.length} product categories to Hive');
 
                                     // Navigate to UsersPage
                                     if (rootContext.mounted) {
-                                      setState(
-                                        () => isFinalSync = false,
-                                      ); // remove loading screen
-                                      Navigator.push(
-                                        rootContext,
-                                        MaterialPageRoute(
-                                          builder: (_) => UsersPage(),
-                                        ),
-                                      );
+                                      setState(() => isFinalSync = false); // remove loading screen
+
+                                      // ✅ Mark setup as complete
+                                      // final prefs = await SharedPreferences.getInstance();
+                                      // await prefs.setBool('isSetupComplete', true);
+                                      Navigator.push(rootContext, MaterialPageRoute(builder: (_) => UsersPage()));
                                     }
                                   } catch (e) {
                                     print('❌ Error saving data: $e');
@@ -389,13 +305,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                               ),
                               actions: [
                                 TextButton(
-                                  child: Text(
-                                    'OK',
-                                    style: TextStyle(
-                                      color: Colors.brown[800],
-                                      fontSize: 17,
-                                    ),
-                                  ),
+                                  child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                                   onPressed: () {
                                     if (rootContext.mounted) {
                                       Navigator.pop(rootContext);
@@ -436,11 +346,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
               size: 70,
               duration: Duration(milliseconds: 1000),
               itemBuilder: (context, index) {
-                final colors = [
-                  ColorsUniversal.buttonsColor,
-                  ColorsUniversal.buttonsColor,
-                  ColorsUniversal.fillWids,
-                ];
+                final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
                 final color = colors[index % colors.length];
                 return DecoratedBox(
                   decoration: BoxDecoration(color: color, shape: BoxShape.circle),

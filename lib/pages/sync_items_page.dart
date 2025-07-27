@@ -1,6 +1,9 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive/hive.dart';
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'package:sahara_app/helpers/sync_helper.dart';
 import 'package:sahara_app/modules/channel_service.dart';
 import 'package:sahara_app/modules/payment_mode_service.dart';
@@ -20,7 +23,8 @@ class SyncItemsPage extends StatefulWidget {
 }
 
 class _SyncItemsPageState extends State<SyncItemsPage> {
-  final deviceId = '044ba7ee5cdd86c5';
+  // final deviceId = '044ba7ee5cdd86c5';
+  //'044ba7ee5cdd86c5'
 
   final List<_SyncItem> syncItems = [
     _SyncItem(label: 'Channel', icon: Icons.device_hub, syncMethod: 'channel'),
@@ -55,6 +59,9 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
     );
 
     try {
+      final deviceId = await getSavedOrFetchDeviceId();
+      print('📱 Device ID used for sync: $deviceId');
+
       switch (method) {
         case 'channel':
           final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
@@ -152,6 +159,9 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
               );
 
               try {
+                final deviceId = await getSavedOrFetchDeviceId();
+                print('📱 Device ID used for sync: $deviceId');
+
                 await fullResourceSync(deviceId: deviceId, context: context);
                 if (!mounted) return;
                 Navigator.pop(context);

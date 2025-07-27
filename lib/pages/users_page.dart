@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive/hive.dart';
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/modules/staff_list_service.dart';
 import 'package:sahara_app/pages/login_page.dart';
@@ -59,7 +60,7 @@ class _UsersPageState extends State<UsersPage> {
 
     try {
       // Fetch from API
-      final deviceId = '044ba7ee5cdd86c5'; // Or load from SharedPrefs
+      final deviceId = await getSavedOrFetchDeviceId();
       final newStaffList = await StaffListService.fetchStaffList(deviceId);
 
       // Save to Hive

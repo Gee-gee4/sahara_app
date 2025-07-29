@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:sahara_app/helpers/device_id_helper.dart';
+import 'package:sahara_app/modules/channel_service.dart';
 import 'package:sahara_app/modules/resource_service.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
@@ -19,7 +20,7 @@ class CloudSettings extends StatefulWidget {
 class _CloudSettingsState extends State<CloudSettings> {
   final TextEditingController _urlController = TextEditingController();
   bool isSyncing = false;
-  
+  String? originalUrl;
 
   @override
   void initState() {
@@ -30,7 +31,71 @@ class _CloudSettingsState extends State<CloudSettings> {
   Future<void> _loadSavedUrl() async {
     final prefs = await SharedPreferences.getInstance();
     final currentUrl = prefs.getString('webApiServiceUrl') ?? '';
+    originalUrl = currentUrl; // store the original
     _urlController.text = currentUrl;
+  }
+
+  Future<void> _showDeviceNotLinkedDialog(String deviceId) async {
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(backgroundColor: ColorsUniversal.background,
+        title: const Text('Device Not Linked'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('This device ID is not linked to the station you input.', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            const Text('Device ID:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                deviceId,
+                style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Please contact your administrator to link this device to the station, or go back and select the correct resource name.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // close dialog
+              Navigator.of(context).pop(); // close CloudSettings page
+            },
+            child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
+          ),
+        ],
+      ),
+    );
+    // AlertDialog(
+    //   title: const Text('Device Not Linked'),
+    //   content: Text(
+    //     'This device is not linked to any station.\n\n'
+    //     'Device ID:\n$deviceId\n\n'
+    //     'Please link this device in the backend before trying again.',
+    //   ),
+    //   actions: [
+    //     TextButton(
+    //       child: const Text('OK'),
+    //       onPressed: () {
+    //         Navigator.of(context).pop(); // close dialog
+    //         Navigator.of(context).pop(); // close CloudSettings page
+    //       },
+    //     ),
+    //   ],
+    // ),
   }
 
   Future<void> _handleCloudSync() async {
@@ -56,6 +121,18 @@ class _CloudSettingsState extends State<CloudSettings> {
         final deviceId = await getSavedOrFetchDeviceId();
         print('📱 Device ID used for sync: $deviceId');
 
+        // ⬇️ Check channel BEFORE full sync
+        final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
+
+        // 🚨 If channelId is 0 or name is null, assume not linked
+        if (channel == null || channel.channelId == 0 || channel.channelName.isEmpty) {
+          _urlController.text = originalUrl ?? ''; // revert to previous valid URL
+          await _showDeviceNotLinkedDialog(deviceId);
+          setState(() => isSyncing = false);
+          return;
+        }
+
+        // ✅ Continue full sync
         await fullResourceSync(deviceId: deviceId, context: context);
 
         if (!mounted) return;
@@ -75,8 +152,8 @@ class _CloudSettingsState extends State<CloudSettings> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Error'),
-        content: Text(msg),
-        actions: [TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context))],
+        content: Text(msg, style: TextStyle(fontSize: 16)),
+        actions: [TextButton(child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)), onPressed: () => Navigator.pop(context))],
       ),
     );
   }
@@ -106,7 +183,7 @@ class _CloudSettingsState extends State<CloudSettings> {
             ),
             const SizedBox(height: 16),
             myButton(context, _handleCloudSync, 'Save & Sync', isLoading: isSyncing, loadingText: 'Syncing...'),
-                      ],
+          ],
         ),
       ),
     );

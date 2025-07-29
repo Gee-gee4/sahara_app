@@ -48,12 +48,15 @@ class _CartPageState extends State<CartPage> {
 
   // Add this method to your class for the cash payment dialog
   void _showCashPaymentDialog(BuildContext context) {
+    final double total = CartStorage().getTotalPrice();
+    final TextEditingController _cashController = TextEditingController(text: total.toStringAsFixed(0));
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        final TextEditingController _cashController = TextEditingController();
         String? errorText;
+
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -66,7 +69,7 @@ class _CartPageState extends State<CartPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Amount Due:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
-                      Text('Ksh ${CartStorage().getTotalPrice().toStringAsFixed(2)}', style: TextStyle(fontSize: 18)),
+                      Text('Ksh ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 18)),
                     ],
                   ),
                   TextField(
@@ -93,8 +96,6 @@ class _CartPageState extends State<CartPage> {
                   style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
                   onPressed: () async {
                     final entered = _cashController.text.trim();
-                    final total = CartStorage().getTotalPrice();
-
                     if (entered.isEmpty) {
                       setState(() => errorText = 'Amount is required');
                       return;
@@ -105,10 +106,13 @@ class _CartPageState extends State<CartPage> {
                       setState(() => errorText = 'Amount must be at least Ksh ${total.toStringAsFixed(0)}');
                       return;
                     }
+
                     final prefs = await SharedPreferences.getInstance();
                     final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
                     final channelName = prefs.getString('channelName') ?? 'CMB Station';
-                    Navigator.pop(context); // close this dialog
+
+                    Navigator.pop(context); // close dialog
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -385,6 +389,16 @@ class _CartPageState extends State<CartPage> {
                       MaterialPageRoute(
                         builder: (context) =>
                             TapCardPage(user: widget.user, action: TapCardAction.cardSales, cartItems: cartItems),
+                      ),
+                    );
+                    return;
+                  }
+                  if (selectedMode == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Selected payment mode not found. Please re-sync.'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: Colors.grey,
                       ),
                     );
                     return;

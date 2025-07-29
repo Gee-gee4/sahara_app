@@ -275,8 +275,8 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                                       setState(() => isFinalSync = false); // remove loading screen
 
                                       // ✅ Mark setup as complete
-                                      // final prefs = await SharedPreferences.getInstance();
-                                      // await prefs.setBool('isSetupComplete', true);
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setBool('isSetupComplete', true);
                                       Navigator.push(rootContext, MaterialPageRoute(builder: (_) => UsersPage()));
                                     }
                                   } catch (e) {

@@ -157,7 +157,8 @@ class _TapCardPageState extends State<TapCardPage> {
   }
 
   void _promptCashAmount(BuildContext context, CustomerAccountDetailsModel? account, String accountNumber, String pin) {
-    final TextEditingController _controller = TextEditingController();
+    final double total = CartStorage().getTotalPrice();
+    final TextEditingController _controller = TextEditingController(text: total.toStringAsFixed(0));
     String? error;
 
     showDialog(
@@ -823,7 +824,7 @@ class _TapCardPageState extends State<TapCardPage> {
           String pin = pinResult.data.replaceAll(';', '').trim();
 
           // Fetch customer details for this account
-          final imei = '7265998e924b3f54';
+          final imei = await getSavedOrFetchDeviceId();
           final staffId = widget.user.staffId;
 
           final accountData = await InitializeCardService.fetchCardData(
@@ -884,7 +885,7 @@ class _TapCardPageState extends State<TapCardPage> {
       // Step 3: Card is not initialized, proceed with normal flow
       setState(() => result = "✅ Card is blank - ready for initialization\n\n🔍 Checking account assignment...");
 
-      final imei = 'd66e5cf98b2ae46c';
+      final imei = await getSavedOrFetchDeviceId();
       final staffId = widget.user.staffId;
 
       // Fetch account data

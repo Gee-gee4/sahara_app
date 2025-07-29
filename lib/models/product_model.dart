@@ -15,8 +15,9 @@ class ProductModel {
     return ProductModel(
       productId: json['productId'],
       productName: json['productName'],
-      productVariations: (json['productVariations'] as List)
-          .map((e) => ProductVariationModel.fromJson(e))
+       productVariations: (json['productVariations'] as List)
+          .map((e) => ProductVariationModel.fromJson(
+              Map<String, dynamic>.from(e))) // 👈 Safe cast
           .toList(),
     );
   }

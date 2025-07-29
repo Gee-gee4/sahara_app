@@ -5,25 +5,23 @@ class ProductCategoryModel {
   final String productCategoryName;
   final List<ProductModel> products;
 
-  ProductCategoryModel({
-    required this.productCategoryId,
-    required this.productCategoryName,
-    required this.products,
-  });
+  ProductCategoryModel({required this.productCategoryId, required this.productCategoryName, required this.products});
 
   factory ProductCategoryModel.fromJson(Map<String, dynamic> json) {
     return ProductCategoryModel(
       productCategoryId: json['productCategoryId'],
       productCategoryName: json['productCategoryName'],
       products: (json['products'] as List)
-          .map((e) => ProductModel.fromJson(e))
+          .map(
+            (product) => ProductModel.fromJson(Map<String, dynamic>.from(product)),
+          ) // 🔥 Forces all keys to be String
           .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'productCategoryId': productCategoryId,
-        'productCategoryName': productCategoryName,
-        'products': products.map((p) => p.toJson()).toList(),
-      };
+    'productCategoryId': productCategoryId,
+    'productCategoryName': productCategoryName,
+    'products': products.map((p) => p.toJson()).toList(),
+  };
 }

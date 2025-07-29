@@ -738,6 +738,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  telpo_flutter_sdk:
+    dependency: "direct main"
+    description:
+      name: telpo_flutter_sdk
+      sha256: c4c4ca76d72e1f04d2154bea5ef19e09ffe7869c66c5a14402eef92872b18d0f
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
   term_glyph:
     dependency: transitive
     description:

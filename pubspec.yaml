@@ -45,7 +45,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   flutter_udid: ^4.0.0
   telpo_flutter_sdk: ^0.1.1
-
+  
 
 dev_dependencies:
   flutter_test:

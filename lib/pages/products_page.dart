@@ -254,7 +254,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                                         content: Text('${product.productName} added to cart'),
                                                         duration: Duration(milliseconds: 700),
                                                         backgroundColor: hexToColor('8f9c68'),
-                                                        behavior: SnackBarBehavior.floating,
+                                                        // behavior: SnackBarBehavior.floating,
                                                       ),
                                                     );
                                                   },

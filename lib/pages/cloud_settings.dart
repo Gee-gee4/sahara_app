@@ -38,15 +38,22 @@ class _CloudSettingsState extends State<CloudSettings> {
   Future<void> _showDeviceNotLinkedDialog(String deviceId) async {
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(backgroundColor: ColorsUniversal.background,
+      builder: (_) => AlertDialog(
+        backgroundColor: ColorsUniversal.background,
         title: const Text('Device Not Linked'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('This device ID is not linked to the station you input.', style: TextStyle(fontSize: 16)),
+            const Text(
+              'This device ID is not linked to the station you input.',
+              style: TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 12),
-            const Text('Device ID:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Text(
+              'Device ID:',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Container(
               width: double.infinity,
@@ -58,7 +65,11 @@ class _CloudSettingsState extends State<CloudSettings> {
               ),
               child: Text(
                 deviceId,
-                style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.black87),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontFamily: 'monospace',
+                  color: Colors.black87,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -74,7 +85,13 @@ class _CloudSettingsState extends State<CloudSettings> {
               Navigator.of(context).pop(); // close dialog
               Navigator.of(context).pop(); // close CloudSettings page
             },
-            child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
+            child: Text(
+              'OK',
+              style: TextStyle(
+                fontSize: 16,
+                color: ColorsUniversal.buttonsColor,
+              ),
+            ),
           ),
         ],
       ),
@@ -112,7 +129,9 @@ class _CloudSettingsState extends State<CloudSettings> {
 
     setState(() => isSyncing = true);
 
-    final resourceSynced = await ResourceService.fetchAndSaveConfig(resourceName);
+    final resourceSynced = await ResourceService.fetchAndSaveConfig(
+      resourceName,
+    );
 
     if (!mounted) return;
 
@@ -125,8 +144,11 @@ class _CloudSettingsState extends State<CloudSettings> {
         final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
 
         // 🚨 If channelId is 0 or name is null, assume not linked
-        if (channel == null || channel.channelId == 0 || channel.channelName.isEmpty) {
-          _urlController.text = originalUrl ?? ''; // revert to previous valid URL
+        if (channel == null ||
+            channel.channelId == 0 ||
+            channel.channelName.isEmpty) {
+          _urlController.text =
+              originalUrl ?? ''; // revert to previous valid URL
           await _showDeviceNotLinkedDialog(deviceId);
           setState(() => isSyncing = false);
           return;
@@ -136,7 +158,10 @@ class _CloudSettingsState extends State<CloudSettings> {
         await fullResourceSync(deviceId: deviceId, context: context);
 
         if (!mounted) return;
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UsersPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const UsersPage()),
+        );
       } catch (e) {
         _showError('Failed to sync all resources.\n${e.toString()}');
       }
@@ -153,7 +178,18 @@ class _CloudSettingsState extends State<CloudSettings> {
       builder: (_) => AlertDialog(
         title: const Text('Error'),
         content: Text(msg, style: TextStyle(fontSize: 16)),
-        actions: [TextButton(child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)), onPressed: () => Navigator.pop(context))],
+        actions: [
+          TextButton(
+            child: Text(
+              'OK',
+              style: TextStyle(
+                fontSize: 16,
+                color: ColorsUniversal.buttonsColor,
+              ),
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }
@@ -171,18 +207,36 @@ class _CloudSettingsState extends State<CloudSettings> {
               decoration: InputDecoration(
                 labelText: 'API URL',
                 labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
-                // hintText: 'https://cmb.saharafcs.com',
                 border: OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ColorsUniversal.buttonsColor, width: 2), // selected border
+                  borderSide: BorderSide(
+                    color: ColorsUniversal.buttonsColor,
+                    width: 2,
+                  ), // selected border
                 ),
               ),
               cursorColor: ColorsUniversal.buttonsColor,
             ),
             const SizedBox(height: 16),
-            myButton(context, _handleCloudSync, 'Save & Sync', isLoading: isSyncing, loadingText: 'Syncing...'),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: myButton(
+                    context,
+                    _handleCloudSync,
+                    'Save & Sync',
+                    isLoading: isSyncing,
+                    loadingText: 'Syncing...',
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -5,6 +5,8 @@ import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
+//from the title category
+
 class ProductListPage extends StatefulWidget {
   final String categoryName;
   final List<ProductModel> products;
@@ -21,6 +23,7 @@ enum PrdtAmtQty { amount, quantity }
 class _ProductListPageState extends State<ProductListPage> {
   final TextEditingController _searchController = TextEditingController();
   List<ProductModel> _filteredProducts = [];
+
 
   @override
   void initState() {

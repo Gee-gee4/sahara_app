@@ -370,11 +370,16 @@ class _CartPageState extends State<CartPage> {
 
                   // 🔍 Get the selected payment mode from Hive
                   final box = Hive.box('payment_modes');
-                  final savedModes = box.get('acceptedModes', defaultValue: <Map<String, dynamic>>[]);
+                  final rawModes = box.get('acceptedModes', defaultValue: []);
+
+                  // Safely convert the dynamic list to a list of PaymentModeModel
+                  final savedModes = (rawModes as List)
+                      .map((e) => Map<String, dynamic>.from(e as Map))
+                      .map((e) => PaymentModeModel.fromJson(e))
+                      .toList();
 
                   PaymentModeModel? selectedMode;
-                  for (var modeMap in savedModes) {
-                    final mode = PaymentModeModel.fromJson(modeMap);
+                  for (var mode in savedModes) {
                     if (mode.payModeDisplayName == selectedPaymentMode) {
                       selectedMode = mode;
                       break;

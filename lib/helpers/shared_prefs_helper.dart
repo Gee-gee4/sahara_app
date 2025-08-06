@@ -27,6 +27,11 @@ class SharedPrefsHelper {
     await prefs.setBool('printPolicies', printPolicies);
   }
 
+   static Future<int> getReceiptCount() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getInt('receiptCount') ?? 1; // default to 1 copy
+}
+
   static Future<void> saveDeviceId(String deviceId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('deviceId', deviceId);

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:sahara_app/pages/resource_page.dart';
 import 'package:sahara_app/pages/users_page.dart';
-import 'package:sahara_app/trash/home_telpo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {

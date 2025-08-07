@@ -17,7 +17,7 @@ class _AutomationSettingsPageState extends State<AutomationSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: myAppBar('Automation Settings'),
+      appBar: myAppBar('Automations Settings'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

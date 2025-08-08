@@ -18,11 +18,43 @@ String fetchPumpsUrl(String stationName) =>
     '$baseTatsUrl/stations/pumps/$stationName';
 String postTransactionUrl() =>
     '$baseTatsUrl/v2/transactions';
+
+// ✅ UPDATED: Use the working format with fdcName and ISO date format
 String fetchTransactionsUrl({
-  required String stationId,
+  required String stationName,
   required String pumpId,
-  bool isPosted = false,
   DateTime? fromDate,
   DateTime? toDate,
-}) =>
-    '$baseTatsUrl/v2/transactions?automationDeviceId=$stationId&pumpAddress=$pumpId&isPosted=$isPosted${fromDate == null ? "" : "&fromDate=$fromDate"}${toDate == null ? "" : "&toDate=$toDate"}';
+}) {
+  String url = '$baseTatsUrl/v2/transactions?fdcName=$stationName';
+  
+  if (fromDate != null) {
+    url += '&fromDate=${fromDate.toIso8601String()}';
+  }
+  
+  if (toDate != null) {
+    url += '&toDate=${toDate.toIso8601String()}';
+  }
+  
+  return url;
+}
+
+// ✅ NEW: Alternative function for single pump transactions
+String fetchPumpTransactionsUrl({
+  required String stationName,
+  required String pumpId,
+  DateTime? fromDate,
+  DateTime? toDate,
+}) {
+  String url = '$baseTatsUrl/v2/transactions?fdcName=$stationName&pumpAddress=$pumpId';
+  
+  if (fromDate != null) {
+    url += '&fromDate=${fromDate.toIso8601String()}';
+  }
+  
+  if (toDate != null) {
+    url += '&toDate=${toDate.toIso8601String()}';
+  }
+  
+  return url;
+}

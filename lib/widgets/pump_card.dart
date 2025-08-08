@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class PumpCard extends StatelessWidget {
@@ -27,7 +28,7 @@ class PumpCard extends StatelessWidget {
     bool narrowPhone = MediaQuery.of(context).size.width < 350;
 
     return Card(
-      color: Colors.teal[50],
+      color: Colors.brown[50],
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       child: InkWell(
@@ -44,7 +45,7 @@ class PumpCard extends StatelessWidget {
                   imagePath,
                   fit: BoxFit.fitWidth,
                   width: imageWidth,
-                  color: Colors.grey,
+                  color: ColorsUniversal.fillWids,
                 ),
                 const SizedBox(height: 6),
                 Text(

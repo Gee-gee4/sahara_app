@@ -12,56 +12,55 @@ import 'package:shared_preferences/shared_preferences.dart';
 class TransactionModule {
   final AuthModule _authModule = AuthModule();
 
+  // ✅ Basic Authorization method
+  String get basicAuthorization {
+    final base64E = base64Encode(utf8.encode('$consumerKey:$consumerSecret'));
+    return 'Basic $base64E';
+  }
+
   /// Fetches transactions for a specific pump
   Future<List<TransactionModel>> fetchTransactions(String pumpId) async {
     List<TransactionModel> items = [];
 
     try {
-      final SharedPreferences sharedPreferences =
-          await SharedPreferences.getInstance();
-      String stationId = sharedPreferences.getString(stationIdKey) ?? '';
-      int duration = sharedPreferences.getInt(durationKey) ?? 1000;
+      final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+      
+      // ✅ Force update baseTatsUrl
+      final savedUrl = sharedPreferences.getString(urlKey);
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        baseTatsUrl = savedUrl;
+      }
+      
+      String stationName = (sharedPreferences.getString(stationNameKey) ?? '').trim();
+      String durationStr = sharedPreferences.getString(durationKey) ?? '30';
+      int duration = int.tryParse(durationStr) ?? 30;
 
       DateTime toDate = DateTime.now();
       DateTime fromDate = toDate.subtract(Duration(minutes: duration));
 
-      // fetch token
-      String token = await _authModule.fetchToken();
+      // ✅ Use Basic Auth (not Bearer token)
       Map<String, String> headers = {
         'Content-type': 'application/json',
-        'authorization': 'Bearer $token',
+        'authorization': basicAuthorization,
       };
 
-      final res = await http.get(
-        Uri.parse(
-          fetchTransactionsUrl(
-            stationId: stationId,
-            pumpId: pumpId,
-            isPosted: false,
-            fromDate: fromDate,
-            toDate: toDate,
-          ),
-        ),
-        headers: headers,
-      );
+      // ✅ Use the working fdcName format
+      final url = '$baseTatsUrl/v2/transactions?fdcName=$stationName&pumpAddress=$pumpId&fromDate=${fromDate.toIso8601String()}&toDate=${toDate.toIso8601String()}';
+
+      final res = await http.get(Uri.parse(url), headers: headers);
 
       if (res.statusCode == 200) {
         List<Map> rawTransactions = List<Map>.from(json.decode(res.body) ?? []);
-        items = rawTransactions
-            .map(
-              (transaction) => TransactionModel(
-                transactionId: transaction['id']?.toString(),
-                nozzle: transaction['nozzle'].toString(),
-                productName: transaction['productName'].toString(),
-                productId: transaction['productId']?.toString(),
-                price: double.tryParse(transaction['price'].toString()) ?? 0,
-                volume: double.tryParse(transaction['volume'].toString()) ?? 0,
-                totalAmount:
-                    double.tryParse(transaction['amount'].toString()) ?? 0,
-                dateTimeSold: transaction['dateTime'],
-              ),
-            )
-            .toList();
+        items = rawTransactions.map((transaction) => TransactionModel(
+          transactionId: transaction['id']?.toString(),
+          nozzle: transaction['nozzle'].toString(),
+          productName: transaction['productName'].toString(),
+          productId: transaction['productId']?.toString(),
+          price: double.tryParse(transaction['price'].toString()) ?? 0,
+          volume: double.tryParse(transaction['volume'].toString()) ?? 0,
+          totalAmount: double.tryParse(transaction['amount'].toString()) ?? 0,
+          dateTimeSold: transaction['dateTime'],
+        )).toList();
       }
     } catch (_) {}
 
@@ -73,25 +72,38 @@ class TransactionModule {
     List<TransactionModel> allItems = [];
 
     try {
-      final SharedPreferences sharedPreferences =
-          await SharedPreferences.getInstance();
-      String stationId = sharedPreferences.getString(stationIdKey) ?? '';
-      int duration = sharedPreferences.getInt(durationKey) ?? 1000;
+      final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+      
+      // ✅ Force update baseTatsUrl
+      final savedUrl = sharedPreferences.getString(urlKey);
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        baseTatsUrl = savedUrl;
+      }
+      
+      String stationName = (sharedPreferences.getString(stationNameKey) ?? '').trim();
+      String durationStr = sharedPreferences.getString(durationKey) ?? '30';
+      int duration = int.tryParse(durationStr) ?? 30;
 
       DateTime toDate = DateTime.now();
       DateTime fromDate = toDate.subtract(Duration(minutes: duration));
 
-      // fetch token
+      // ✅ Use Bearer token for fetching pumps
       String token = await _authModule.fetchToken();
-      Map<String, String> headers = {
+      Map<String, String> pumpHeaders = {
         'Content-type': 'application/json',
         'authorization': 'Bearer $token',
       };
 
+      // ✅ Use Basic Auth for transactions
+      Map<String, String> transactionHeaders = {
+        'Content-type': 'application/json',
+        'authorization': basicAuthorization,
+      };
+
       // fetch all pumps first
       final resPumps = await http.get(
-        Uri.parse(fetchPumpsUrl(stationId)),
-        headers: headers,
+        Uri.parse(fetchPumpsUrl(stationName)),
+        headers: pumpHeaders,
       );
 
       if (resPumps.statusCode == 200) {
@@ -101,40 +113,26 @@ class TransactionModule {
         for (var pump in pumps) {
           final pumpId = pump['rdgIndex'];
 
+          // ✅ Use the working fdcName format
+          final url = '$baseTatsUrl/v2/transactions?fdcName=$stationName&pumpAddress=$pumpId&fromDate=${fromDate.toIso8601String()}&toDate=${toDate.toIso8601String()}';
+
           final res = await http.get(
-            Uri.parse(
-              fetchTransactionsUrl(
-                stationId: stationId,
-                pumpId: pumpId.toString(),
-                isPosted: false,
-                fromDate: fromDate,
-                toDate: toDate,
-              ),
-            ),
-            headers: headers,
+            Uri.parse(url),
+            headers: transactionHeaders,
           );
 
           if (res.statusCode == 200) {
-            List<Map> rawTransactions = List<Map>.from(
-              json.decode(res.body) ?? [],
-            );
-            final items = rawTransactions
-                .map(
-                  (transaction) => TransactionModel(
-                    transactionId: transaction['id']?.toString(),
-                    nozzle: transaction['nozzle'].toString(),
-                    productName: transaction['productName'].toString(),
-                    productId: transaction['productId']?.toString(),
-                    price:
-                        double.tryParse(transaction['price'].toString()) ?? 0,
-                    volume:
-                        double.tryParse(transaction['volume'].toString()) ?? 0,
-                    totalAmount:
-                        double.tryParse(transaction['amount'].toString()) ?? 0,
-                    dateTimeSold: transaction['dateTime'],
-                  ),
-                )
-                .toList();
+            List<Map> rawTransactions = List<Map>.from(json.decode(res.body) ?? []);
+            final items = rawTransactions.map((transaction) => TransactionModel(
+              transactionId: transaction['id']?.toString(),
+              nozzle: transaction['nozzle'].toString(),
+              productName: transaction['productName'].toString(),
+              productId: transaction['productId']?.toString(),
+              price: double.tryParse(transaction['price'].toString()) ?? 0,
+              volume: double.tryParse(transaction['volume'].toString()) ?? 0,
+              totalAmount: double.tryParse(transaction['amount'].toString()) ?? 0,
+              dateTimeSold: transaction['dateTime'],
+            )).toList();
 
             allItems.addAll(items);
           }
@@ -155,10 +153,10 @@ class TransactionModule {
     String? phoneNumber,
   }) async {
     try {
-      String token = await _authModule.fetchToken();
+      // ✅ Use Basic Auth for posting transactions
       Map<String, String> headers = {
         'Content-type': 'application/json',
-        'authorization': 'Bearer $token',
+        'authorization': basicAuthorization,
       };
 
       final res = await http.put(

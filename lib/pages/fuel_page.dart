@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:sahara_app/models/pump_model.dart';
 import 'package:sahara_app/modules/pumps_module.dart';
 import 'package:sahara_app/pages/transaction_page.dart';
 import 'package:sahara_app/utils/color_hex.dart';
+import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/pump_card.dart';
 
 class FuelPage extends StatefulWidget {
@@ -33,14 +35,15 @@ class _FuelPageState extends State<FuelPage> {
   @override
   Widget build(BuildContext context) {
     bool narrowPhone = MediaQuery.of(context).size.width < 365;
-    
+
     return Scaffold(
       extendBody: true,
-      backgroundColor: hexToColor('d7eaee'),
+      backgroundColor: ColorsUniversal.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: const Text('Fuel Pumps'),
+        // title: const Text('Fuel Pumps'),
         actions: [
           InkWell(
             onTap: () => Navigator.push(
@@ -53,7 +56,7 @@ class _FuelPageState extends State<FuelPage> {
               padding: const EdgeInsets.symmetric(horizontal: 6),
               width: 170,
               decoration: BoxDecoration(
-                color: Colors.teal[50],
+                color: ColorsUniversal.fillWids,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -65,7 +68,8 @@ class _FuelPageState extends State<FuelPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const TransactionPage(pumpId: 'all'),
+                          builder: (context) =>
+                              const TransactionPage(pumpId: 'all'),
                         ),
                       );
                     },
@@ -77,15 +81,27 @@ class _FuelPageState extends State<FuelPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (isLoading)
-            LinearProgressIndicator(
-              color: hexToColor('005954'),
-              backgroundColor: hexToColor('9fd8e1'),
-            ),
-          Expanded(
-            child: GridView.builder(
+      body: isLoading
+          ? Center(
+              child: SpinKitCircle(
+                size: 70,
+                duration: Duration(milliseconds: 1000),
+                itemBuilder: (context, index) {
+                  final colors = [
+                    ColorsUniversal.buttonsColor,
+                    ColorsUniversal.fillWids,
+                  ];
+                  final color = colors[index % colors.length];
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                },
+              ),
+            )
+          : GridView.builder(
               itemCount: pumps.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -105,7 +121,8 @@ class _FuelPageState extends State<FuelPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => TransactionPage(pumpId: pumpCurrent.pumpId),
+                          builder: (context) =>
+                              TransactionPage(pumpId: pumpCurrent.pumpId),
                         ),
                       );
                     },
@@ -113,7 +130,8 @@ class _FuelPageState extends State<FuelPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => TransactionPage(pumpId: pumpCurrent.pumpId),
+                          builder: (context) =>
+                              TransactionPage(pumpId: pumpCurrent.pumpId),
                         ),
                       );
                     },
@@ -121,9 +139,6 @@ class _FuelPageState extends State<FuelPage> {
                 );
               },
             ),
-          ),
-        ],
-      ),
     );
   }
 }

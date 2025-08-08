@@ -6,13 +6,12 @@ import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
-import 'package:sahara_app/pages/automation_settings_page.dart';
 import 'package:sahara_app/pages/cart_page.dart';
 import 'package:sahara_app/pages/cloud_settings.dart';
+import 'package:sahara_app/pages/fuel_page.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/pages/product_list_page.dart';
 import 'package:sahara_app/pages/products_page.dart';
-import 'package:sahara_app/pages/pump_list_page.dart';
 import 'package:sahara_app/pages/settings_page.dart';
 import 'package:sahara_app/pages/sync_items_page.dart';
 import 'package:sahara_app/pages/users_page.dart';
@@ -100,14 +99,7 @@ class _HomePageState extends State<HomePage> {
                           });
                         } else {
                           setState(() {
-                            _activeCategoryPage = PumpListPage(
-                              categoryName: category.productCategoryName,
-                              onBack: () {
-                                setState(() {
-                                  _activeCategoryPage = null;
-                                });
-                              },
-                            );
+                              _activeCategoryPage = FuelPage();
                           });
                         }
                       },
@@ -269,10 +261,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               } else if (value == 'automation') {
-                 Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AutomationSettingsPage()),
-                );
+                //  Navigator.push(
+                //   context,
+                //   MaterialPageRoute(builder: (context) => AutomationSettingsPage()),
+                // );
               } else if (value == 'cloud') {
                 Navigator.push(
                   context,

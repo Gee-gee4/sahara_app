@@ -143,24 +143,24 @@ Future<void> _waitForPrinterToFinish() async {
   // Get client price for a specific product (with fallback to station price)
   double getClientPriceForProduct(CartItem item) {
     if (widget.accountProducts == null) {
-      print("❌ No account products available - using station price: ${item.unitPrice}");
-      return item.unitPrice; // Fallback to station price
+      print("❌ No account products available - using station price: ${item.price}");
+      return item.price; // Fallback to station price
     }
 
-    print("🔍 Looking for product ID: ${item.productId} (${item.name})");
+    print("🔍 Looking for product ID: ${item.productId} (${item.productName})");
 
     final accountProduct = widget.accountProducts!.firstWhere(
       (p) => p.productVariationId == item.productId,
       orElse: () {
         print(
-          "❌ Product '${item.name}' (ID: ${item.productId}) not found in account - using station price: ${item.unitPrice}",
+          "❌ Product '${item.productName}' (ID: ${item.productId}) not found in account - using station price: ${item.price}",
         );
         return ProductCardDetailsModel(
           productVariationId: 0,
           productVariationName: '',
           productCategoryId: 0,
           productCategoryName: '',
-          productPrice: item.unitPrice, // Use station price as fallback
+          productPrice: item.price, // Use station price as fallback
           productDiscount: 0,
         );
       },
@@ -173,21 +173,21 @@ Future<void> _waitForPrinterToFinish() async {
       );
       return accountProduct.productPrice;
     } else {
-      print("💰 Using station price for ${item.name}: ${item.unitPrice}");
-      return item.unitPrice;
+      print("💰 Using station price for ${item.productName}: ${item.price}");
+      return item.price;
     }
   }
 
   // Original station pricing total
   double getStationTotal() {
-    return widget.cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+    return widget.cartItems.fold(0, (sum, item) => sum + (item.price * item.quantity));
   }
 
   // Format product line for station pricing (cash sales)
   String formatStationProductLine(CartItem item) {
-    final total = item.unitPrice * item.quantity;
-    final name = item.name.padRight(7).substring(0, 7);
-    final price = item.unitPrice.toStringAsFixed(0).padLeft(5);
+    final total = item.price * item.quantity;
+    final name = item.productName.padRight(7).substring(0, 7);
+    final price = item.price.toStringAsFixed(0).padLeft(5);
     final qty = item.quantity;
     final lineTotal = total.toStringAsFixed(0).padLeft(5);
     return "$name  $price  $qty  $lineTotal";
@@ -197,7 +197,7 @@ Future<void> _waitForPrinterToFinish() async {
   String formatClientProductLine(CartItem item) {
     final clientPrice = getClientPriceForProduct(item); // Now passes the whole CartItem
     final total = clientPrice * item.quantity;
-    final name = item.name.padRight(7).substring(0, 7);
+    final name = item.productName.padRight(7).substring(0, 7);
     final price = clientPrice.toStringAsFixed(0).padLeft(5);
     final qty = item.quantity;
     final lineTotal = total.toStringAsFixed(0).padLeft(5);

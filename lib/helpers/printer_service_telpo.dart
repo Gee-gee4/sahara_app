@@ -34,7 +34,7 @@ class PrinterServiceTelpo {
 
     // Calculations
     double getClientPrice(CartItem item) {
-      if (accountProducts == null) return item.unitPrice;
+      if (accountProducts == null) return item.price;
       final match = accountProducts.firstWhere(
         (p) => p.productVariationId == item.productId,
         orElse: () => ProductCardDetailsModel(
@@ -42,23 +42,23 @@ class PrinterServiceTelpo {
           productVariationName: '',
           productCategoryId: 0,
           productCategoryName: '',
-          productPrice: item.unitPrice,
+          productPrice: item.price,
           productDiscount: 0,
         ),
       );
-      return match.productVariationId != 0 ? match.productPrice : item.unitPrice;
+      return match.productVariationId != 0 ? match.productPrice : item.price;
     }
 
     String formatLine(CartItem item, double unitPrice) {
       final total = unitPrice * item.quantity;
-      final name = item.name.padRight(7).substring(0, 7);
+      final name = item.productName.padRight(7).substring(0, 7);
       final price = unitPrice.toStringAsFixed(0).padLeft(5);
       final qty = item.quantity;
       final totalStr = total.toStringAsFixed(0).padLeft(5);
       return "$name  $price  $qty  $totalStr";
     }
 
-    double stationTotal = cartItems.fold(0.0, (sum, i) => sum + i.unitPrice * i.quantity);
+    double stationTotal = cartItems.fold(0.0, (sum, i) => sum + i.price * i.quantity);
     double total = isCardSale ? clientTotal : stationTotal;
     double netTotal = isCardSale ? (clientTotal - discount) : total;
     double change = isCardSale ? 0 : (cashGiven - total);
@@ -81,7 +81,7 @@ class PrinterServiceTelpo {
     sheet.addElement(PrintData.space(line: 2));
 
     for (final item in cartItems) {
-      final unitPrice = isCardSale ? getClientPrice(item) : item.unitPrice;
+      final unitPrice = isCardSale ? getClientPrice(item) : item.price;
       sheet.addElement(PrintData.text(formatLine(item, unitPrice), fontSize: PrintedFontSize.size24));
     }
 

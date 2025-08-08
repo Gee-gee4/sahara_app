@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 
 class CartItem {
+  CartItem({
+    String? uniqueIdentifier,
+    required this.productId, // Add this parameter
+    required this.productName,
+    required this.price,
+    required this.quantity,
+  }) {
+    uniqueId = uniqueIdentifier ?? '$productId:$quantity';
+  }
+
+  late String uniqueId; // For transaction tracking
   final int productId; // Add this for discount matching
-  final String name;
-  final double unitPrice;
+  final String productName;
+  final double price;
   double quantity;
 
-  CartItem({
-    required this.productId, // Add this parameter
-    required this.name, 
-    required this.unitPrice, 
-    required this.quantity,
-  });
+  double get totalAmount => price * quantity;
 }
 
 class CartStorage extends ChangeNotifier {
@@ -19,24 +25,31 @@ class CartStorage extends ChangeNotifier {
 
   CartStorage._();
 
-  factory CartStorage(){
+  factory CartStorage() {
     _cache ??= CartStorage._();
     return _cache!;
   }
   final List<CartItem> cartItems = [];
 
   // Update this method to include productId
-  void addToCart(int productId, String name, double unitPrice, double quantity) {
+  void addToCart(
+    int productId,
+    String name,
+    double unitPrice,
+    double quantity,
+  ) {
     final index = cartItems.indexWhere((item) => item.productId == productId);
     if (index != -1) {
       cartItems[index].quantity += quantity;
     } else {
-      cartItems.add(CartItem(
-        productId: productId,
-        name: name, 
-        unitPrice: unitPrice, 
-        quantity: quantity,
-      ));
+      cartItems.add(
+        CartItem(
+          productId: productId,
+          productName: name,
+          price: unitPrice,
+          quantity: quantity,
+        ),
+      );
     }
     notifyListeners();
   }
@@ -55,7 +68,7 @@ class CartStorage extends ChangeNotifier {
   }
 
   // Update this method to use productId
-  void decrementQuantity(int productId,) {
+  void decrementQuantity(int productId) {
     final index = cartItems.indexWhere((item) => item.productId == productId);
     if (index != -1) {
       final item = cartItems[index];
@@ -88,6 +101,9 @@ class CartStorage extends ChangeNotifier {
   }
 
   double getTotalPrice() {
-    return CartStorage().cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+    return CartStorage().cartItems.fold(
+      0,
+      (sum, item) => sum + (item.price * item.quantity),
+    );
   }
 }

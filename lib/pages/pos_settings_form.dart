@@ -10,6 +10,8 @@ import 'package:sahara_app/modules/payment_mode_service.dart';
 import 'package:sahara_app/modules/product_service.dart';
 import 'package:sahara_app/modules/redeem_rewards_service.dart';
 import 'package:sahara_app/modules/staff_list_service.dart';
+import 'package:sahara_app/pages/auto_mode_settings.dart';
+import 'package:sahara_app/pages/pos_settings_helper.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -143,66 +145,12 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       ),
                     ),
                     if (_mode == OperationMode.auto) ...[
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: _urlController,
-                        decoration: InputDecoration(
-                          hintText: 'URL',
-                          border: OutlineInputBorder(),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: ColorsUniversal.buttonsColor,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: ColorsUniversal.buttonsColor,
-                              width: 2,
-                            ), // selected border
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _stationNameController,
-                        decoration: InputDecoration(
-                          hintText: 'Station Name',
-                          border: OutlineInputBorder(),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: ColorsUniversal.buttonsColor,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: ColorsUniversal.buttonsColor,
-                              width: 2,
-                            ), // selected border
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _fetchingTimeController,
-                        decoration: InputDecoration(
-                          hintText: 'Fetching Time',
-                          border: OutlineInputBorder(),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: ColorsUniversal.buttonsColor,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: ColorsUniversal.buttonsColor,
-                              width: 2,
-                            ), // selected border
-                          ),
-                        ),
-                        keyboardType: TextInputType.number,
+                      AutoModeSettings(
+                        borderColor: ColorsUniversal.buttonsColor,
+                        urlController:
+                            _urlController, // ✅ Pass same controllers
+                        stationNameController: _stationNameController,
+                        fetchingTimeController: _fetchingTimeController,
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -271,6 +219,17 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       final receiptCount = _receipt == ReceiptNumber.single
                           ? 1
                           : 2;
+                      // ✅ Now this will save the ACTUAL values from the text fields
+                      await PosSettingsHelper.saveSettings(
+                        url: _urlController.text,
+                        stationName: _stationNameController.text,
+                        fetchingTime: _fetchingTimeController.text,
+                      );
+
+                      print('💾 Final settings saved:');
+                      print('  URL: ${_urlController.text}');
+                      print('  Station: ${_stationNameController.text}');
+                      print('  Duration: ${_fetchingTimeController.text}');
 
                       // Save POS settings to shared preferences
                       await SharedPrefsHelper.savePosSettings(

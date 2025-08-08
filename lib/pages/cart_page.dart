@@ -189,7 +189,7 @@ class _CartPageState extends State<CartPage> {
                 itemCount: cartItems.length,
                 itemBuilder: (context, index) {
                   final item = cartItems[index];
-                  final total = item.unitPrice * item.quantity;
+                  final total = item.price * item.quantity;
                   return Card(
                     color: Colors.brown[100],
                     child: SizedBox(
@@ -207,12 +207,12 @@ class _CartPageState extends State<CartPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    item.name,
+                                    item.productName,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
                                   ),
-                                  Text('Ksh ${item.unitPrice}', style: TextStyle(color: Colors.black54)),
+                                  Text('Ksh ${item.price}', style: TextStyle(color: Colors.black54)),
                                 ],
                               ),
                             ),

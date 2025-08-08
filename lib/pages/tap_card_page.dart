@@ -366,7 +366,7 @@ class _TapCardPageState extends State<TapCardPage> {
 
         totalDiscount += discountPerLitre * quantity;
 
-        print("Discount for ${cartItem.name}: $discountPerLitre × $quantity = ${discountPerLitre * quantity}");
+        print("Discount for ${cartItem.productName}: $discountPerLitre × $quantity = ${discountPerLitre * quantity}");
       }
     }
 
@@ -398,13 +398,13 @@ class _TapCardPageState extends State<TapCardPage> {
 
         clientTotal += clientPrice * quantity;
 
-        print("Product: ${cartItem.name}");
+        print("Product: ${cartItem.productName}");
         print("Cart Quantity: $quantity, Client Price: $clientPrice");
         print("Product Total: ${clientPrice * quantity}");
       } else {
         // If product not found in account, use original pricing as fallback
-        clientTotal += cartItem.unitPrice * cartItem.quantity;
-        print("Product ${cartItem.name} not found in account - using station price");
+        clientTotal += cartItem.price * cartItem.quantity;
+        print("Product ${cartItem.productName} not found in account - using station price");
       }
     }
 

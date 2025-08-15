@@ -5,8 +5,6 @@ class CustomerAccountDetailsModel {
   final String? mask;
   final String? cardMask;
   final List<String>? equipmentMask;
-
-
   final String agreementTypeName;
   final String agreementDescription;
   final String description;

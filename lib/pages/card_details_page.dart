@@ -7,8 +7,8 @@ import 'package:sahara_app/utils/colors_universal.dart';
 class CardDetailsPage extends StatelessWidget {
   final StaffListModel user;
   final CustomerAccountDetailsModel details;
-
-  const CardDetailsPage({super.key, required this.user, required this.details});
+  final String termNumber;
+  const CardDetailsPage({super.key, required this.user, required this.details,required this.termNumber});
 
   Widget _divider() {
     return Padding(padding: const EdgeInsets.symmetric(vertical: 4.0), child: Divider(thickness: 1));
@@ -52,49 +52,48 @@ class CardDetailsPage extends StatelessWidget {
                   child: Text('CARD DETAILS', style: TextStyle(decoration: TextDecoration.underline)),
                 ),
                 const SizedBox(height: 8),
-                Text('TERM# 8458cn34e3kf343', style: receiptStyle),
-        
+                Text('TERM# $termNumber', style: receiptStyle),
                 Divider(),
-        
+
                 _row('Customer:', details.customerName, receiptStyle),
                 _row('Card:', details.mask ?? 'N/A', receiptStyle),
                 _row('Agreement:', details.agreementDescription, receiptStyle),
                 _row('Account Type:', details.accountCreditTypeName, receiptStyle),
-                _row('Card Balance:', details.customerAccountBalance.toString(), receiptStyle),
+                _row('Card Balance:', details.customerAccountBalance.toStringAsFixed(2), receiptStyle),
                 _row('Status:', details.customerIsActive ? 'Active' : 'Inactive', receiptStyle),
-        
+
                 Divider(),
                 // const SizedBox(height: 1),
                 Divider(),
-                Text('Products & Discounts:',style: receiptStyle.copyWith(fontWeight: FontWeight.bold),),
+                Text('Products & Discounts:', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                 for (final product in details.products) ...[
                   _row('Product Name:', product.productVariationName, receiptStyle),
                   _row('Product Price:', product.productPrice.toStringAsFixed(2), receiptStyle),
                   _row('Product Discount:', product.productDiscount.toStringAsFixed(2), receiptStyle),
                   _divider(),
                 ],
-        
+
                 Divider(),
-        
+
                 Text('Account Policies:', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                 _row('Start Time:', details.startTime, receiptStyle),
                 _row('End Time:', details.endTime, receiptStyle),
                 _row('Frequency:', details.frequecy.toString(), receiptStyle),
                 _row('Frequency Period:', details.frequencyPeriod ?? 'null', receiptStyle),
-        
+
                 Divider(),
                 Text('Fueling Days:', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                 Text(details.dateToFuel, style: receiptStyle),
-        
+
                 Divider(),
-        
+
                 // const SizedBox(height: 3),
                 // Divider(),
                 _row('Date', DateTime.now().toString().substring(0, 19), receiptStyle),
                 _row('Served By', user.staffName, receiptStyle),
-        
+
                 Divider(),
-        
+
                 const Center(
                   child: Text('APPROVAL', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
@@ -112,7 +111,7 @@ class CardDetailsPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         backgroundColor: ColorsUniversal.buttonsColor,
-        child: Icon(Icons.print,color: Colors.white,)
+        child: Icon(Icons.print, color: Colors.white),
       ),
 
       // Position the FAB properly

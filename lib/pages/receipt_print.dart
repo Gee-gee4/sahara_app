@@ -6,7 +6,9 @@ import 'package:sahara_app/helpers/printer_service_telpo.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/product_card_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
+import 'package:sahara_app/modules/sale_service.dart';
 import 'package:sahara_app/pages/home_page.dart';
+import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:telpo_flutter_sdk/telpo_flutter_sdk.dart';
 
@@ -25,6 +27,12 @@ class ReceiptPrint extends StatefulWidget {
   final List<ProductCardDetailsModel>? accountProducts;
   final String? companyName;
   final String? channelName;
+  final String refNumber;
+  final String termNumber;
+  final String? cardUID;
+  final int? customerAccountNo;
+   final int? paymentModeId; 
+  final String? paymentModeName; 
 
   const ReceiptPrint({
     super.key,
@@ -42,6 +50,12 @@ class ReceiptPrint extends StatefulWidget {
     this.accountProducts,
     this.companyName,
     this.channelName,
+    required this.refNumber,
+    required this.termNumber,
+    this.cardUID,
+    this.customerAccountNo,
+     this.paymentModeId,        
+    this.paymentModeName,
   });
 
   @override
@@ -49,97 +63,232 @@ class ReceiptPrint extends StatefulWidget {
 }
 
 class _ReceiptPrintState extends State<ReceiptPrint> {
+  bool _saleCompleted = false;
+  bool _apiCallInProgress = true;
+  String? _apiError;
 
- Future<void> _printReceipt() async {
-  final receiptCount = await SharedPrefsHelper.getReceiptCount();
+  @override
+  void initState() {
+    super.initState();
+    // Complete the sale as soon as the receipt page loads
+    _completeSale();
+  }
+
+  Future<void> _completeSale() async {
+  print('📤 Completing sale transaction...');
   
-  for (int i = 0; i < receiptCount; i++) {
-    print('🖨️ Printing receipt ${i + 1} of $receiptCount');
-    
-    final result = await PrinterServiceTelpo().printReceiptForTransaction(
-      user: widget.user,
+  final bool isCardSale = widget.showCardDetails && widget.clientTotal != null && widget.discount != null;
+  
+  try {
+    final apiResult = await SaleService.completeSale(
+      refNumber: widget.refNumber,
       cartItems: widget.cartItems,
-      cashGiven: widget.cashGiven,
-      customerName: widget.customerName,
-      card: widget.card,
-      accountType: widget.accountType,
-      vehicleNumber: widget.vehicleNumber,
-      showCardDetails: widget.showCardDetails,
-      discount: widget.discount,
-      clientTotal: widget.clientTotal,
-      customerBalance: widget.customerBalance,
-      accountProducts: widget.accountProducts,
-      companyName: widget.companyName,
-      channelName: widget.channelName,
+      user: widget.user,
+      isCardSale: isCardSale,
+      // Card sale data - ALWAYS pass card data if available (for both card sales AND cash+card sales)
+      customerName: widget.customerName.isNotEmpty ? widget.customerName : null,
+      customerUID: widget.cardUID, // Pass card UID if available (for cash+card tracking)
+      customerAccountNo: widget.customerAccountNo, // Pass account number if available (for cash+card tracking)
+      customerAccountBalance: widget.customerBalance,
+      accountProducts: isCardSale ? widget.accountProducts : null, // Only for card sales (client pricing)
+      // Cash sale data
+      cashGiven: !isCardSale ? widget.cashGiven : null,
+      change: !isCardSale ? (widget.cashGiven - getStationTotal()) : null,
+      // Payment mode data
+      paymentModeId: widget.paymentModeId,
+      paymentModeName: widget.paymentModeName,
     );
 
-    if (result != PrintResult.success) {
+    setState(() {
+      _apiCallInProgress = false;
+      if (apiResult['success']) {
+        _saleCompleted = true;
+        print('✅ Sale transaction completed successfully');
+      } else {
+        _apiError = apiResult['error'];
+        // ignore: unnecessary_brace_in_string_interps
+        print('❌ Sale transaction failed: ${_apiError}');
+      }
+    });
+
+    // Show feedback to user
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Receipt ${i + 1} failed to print."))
+        SnackBar(
+          content: Text(
+            _saleCompleted 
+              ? 'Sale completed successfully!' 
+              : 'Sale failed: $_apiError'
+          ),
+          backgroundColor: _saleCompleted ? hexToColor('8f9c68') : Colors.grey,
+          duration: Duration(seconds: 3),
+        ),
       );
-      return;
     }
+  } catch (e) {
+    setState(() {
+      _apiCallInProgress = false;
+      _apiError = 'Network error: $e';
+    });
     
-    print('✅ Receipt ${i + 1} print command sent');
-    
-    // Wait for printer to actually finish printing
-    if (i < receiptCount - 1) {
-      // Use both approaches: minimum delay + status monitoring
-      print('⏳ Ensuring printer is ready for next receipt...');
-      
-      // Calculate minimum delay based on content
-      int minDelay = 2000 + (widget.cartItems.length * 300);
-      await Future.delayed(Duration(milliseconds: minDelay));
-      
-      // Then check if printer is actually ready
-      await _waitForPrinterToFinish();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sale failed: Network error'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
+    print('❌ Error completing sale: $e');
   }
-
-  print('🎉 All receipts printed, navigating to home');
-  CartStorage().clearCart();
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (context) => HomePage(user: widget.user)),
-    (route) => false,
-  );
 }
 
-// Helper method to wait for printer to finish
-Future<void> _waitForPrinterToFinish() async {
-  final printer = TelpoFlutterChannel();
-  int maxWaitTime = 30; // Maximum 30 seconds
-  int waitCount = 0;
-  
-  while (waitCount < maxWaitTime) {
-    try {
-      final status = await printer.checkStatus();
-      print('📊 Printer status: $status');
-      
-      // If printer is ready/ok, it's finished printing
-      if (status == TelpoStatus.ok) {
-        print('✅ Printer finished, ready for next receipt');
-        await Future.delayed(Duration(milliseconds: 500)); // Small buffer
-        return;
-      }
-      
-      // If there's an error, stop waiting
-      if (status == TelpoStatus.noPaper || status == TelpoStatus.overHeat) {
-        print('❌ Printer error: $status');
-        return;
-      }
-      
-    } catch (e) {
-      print('❌ Error checking printer status: $e');
+  Future<void> _printReceipt() async {
+    // Check if sale was completed successfully before printing
+    if (!_saleCompleted) {
+      // Show dialog asking if user wants to proceed anyway
+      final shouldPrint = await _showSaleNotCompletedDialog();
+      if (!shouldPrint) return; // User chose not to print
     }
-    
-    // Wait 1 second before checking again
-    await Future.delayed(Duration(seconds: 1));
-    waitCount++;
+
+    final receiptCount = await SharedPrefsHelper.getReceiptCount();
+
+    for (int i = 0; i < receiptCount; i++) {
+      print('🖨️ Printing receipt ${i + 1} of $receiptCount');
+
+      final result = await PrinterServiceTelpo().printReceiptForTransaction(
+        user: widget.user,
+        cartItems: widget.cartItems,
+        cashGiven: widget.cashGiven,
+        customerName: widget.customerName,
+        card: widget.card,
+        accountType: widget.accountType,
+        vehicleNumber: widget.vehicleNumber,
+        showCardDetails: widget.showCardDetails,
+        discount: widget.discount,
+        clientTotal: widget.clientTotal,
+        customerBalance: widget.customerBalance,
+        accountProducts: widget.accountProducts,
+        companyName: widget.companyName,
+        channelName: widget.channelName,
+      );
+
+      if (result != PrintResult.success) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Receipt ${i + 1} failed to print.")));
+        return;
+      }
+
+      print('✅ Receipt ${i + 1} print command sent');
+
+      // Wait for printer to actually finish printing
+      if (i < receiptCount - 1) {
+        // Use both approaches: minimum delay + status monitoring
+        print('⏳ Ensuring printer is ready for next receipt...');
+
+        // Calculate minimum delay based on content
+        int minDelay = 2000 + (widget.cartItems.length * 300);
+        await Future.delayed(Duration(milliseconds: minDelay));
+
+        // Then check if printer is actually ready
+        await _waitForPrinterToFinish();
+      }
+    }
+
+    print('🎉 All receipts printed');
+
+    // Show success message but don't navigate yet
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('All receipts printed successfully!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // Optional: Auto-navigate after a short delay to let user see the success message
+    await Future.delayed(Duration(seconds: 2));
+
+    CartStorage().clearCart();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => HomePage(user: widget.user)),
+      (route) => false,
+    );
   }
-  
-  print('⚠️ Max wait time reached, proceeding anyway');
-}
+
+  // Helper dialog to show when sale isn't completed
+  Future<bool> _showSaleNotCompletedDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Sale Not Completed'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 48),
+                  SizedBox(height: 16),
+                  if (_apiCallInProgress)
+                    Text('Sale is still being processed in the system. Please wait...')
+                  else
+                    Text('Sale failed to complete in the system: ${_apiError ?? "Unknown error"}'),
+                  SizedBox(height: 16),
+                  Text('Do you still want to print the receipt?'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text('Print Anyway', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Return false if dialog is dismissed
+  }
+
+  // Helper method to wait for printer to finish
+  Future<void> _waitForPrinterToFinish() async {
+    final printer = TelpoFlutterChannel();
+    int maxWaitTime = 30; // Maximum 30 seconds
+    int waitCount = 0;
+
+    while (waitCount < maxWaitTime) {
+      try {
+        final status = await printer.checkStatus();
+        print('📊 Printer status: $status');
+
+        // If printer is ready/ok, it's finished printing
+        if (status == TelpoStatus.ok) {
+          print('✅ Printer finished, ready for next receipt');
+          await Future.delayed(Duration(milliseconds: 500)); // Small buffer
+          return;
+        }
+
+        // If there's an error, stop waiting
+        if (status == TelpoStatus.noPaper || status == TelpoStatus.overHeat) {
+          print('❌ Printer error: $status');
+          return;
+        }
+      } catch (e) {
+        print('❌ Error checking printer status: $e');
+      }
+
+      // Wait 1 second before checking again
+      await Future.delayed(Duration(seconds: 1));
+      waitCount++;
+    }
+
+    print('⚠️ Max wait time reached, proceeding anyway');
+  }
+
   // Get client price for a specific product (with fallback to station price)
   double getClientPriceForProduct(CartItem item) {
     if (widget.accountProducts == null) {
@@ -235,11 +384,12 @@ Future<void> _waitForPrinterToFinish() async {
     );
   }
 
+  //TR5250815063919
   @override
   Widget build(BuildContext context) {
     final TextStyle receiptStyle = const TextStyle(fontFamily: 'Courier', fontSize: 14);
     final TextStyle balanceStyle = const TextStyle(fontFamily: 'Courier', fontSize: 14, color: Colors.red);
-
+    print(widget.refNumber);
     // Determine if this is a card sale
     final bool isCardSale = widget.showCardDetails && widget.clientTotal != null && widget.discount != null;
 
@@ -248,7 +398,6 @@ Future<void> _waitForPrinterToFinish() async {
     final double discountAmount = isCardSale ? widget.discount! : 0.0;
     final double netTotal = totalAmount - discountAmount;
     final double change = isCardSale ? 0.0 : (widget.cashGiven - totalAmount);
-
     return PopScope(
       canPop: false, // Prevent default back navigation
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
@@ -295,8 +444,8 @@ Future<void> _waitForPrinterToFinish() async {
                     child: Text('SALE', style: TextStyle(decoration: TextDecoration.underline)),
                   ),
                   const SizedBox(height: 8),
-                  Text('TERM# 8458cn34e3kf343', style: receiptStyle),
-                  Text('REF# TR45739547549219', style: receiptStyle),
+                  Text('TERM# ${widget.termNumber}', style: receiptStyle),
+                  Text('REF# ${widget.refNumber}', style: receiptStyle),
 
                   const Divider(),
 

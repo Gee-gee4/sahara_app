@@ -23,18 +23,6 @@ class ChannelService {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        // print("📦 Raw JSON fetched: $json");
-        // final channel = ChannelModel.fromJson(json);
-        // print("✅ Channel fetched:");
-        // print("  • Name: ${channel.channelName}");
-        // print("  • Company: ${channel.companyName}");
-        // print("  • Country: ${channel.country}");
-        // print("  • Address: ${channel.address}");
-        // print("  • City: ${channel.city}");
-        // print("  • Channel ID: ${channel.channelId}");
-        // print("  • Decimals: ${channel.noOfDecimalPlaces}");
-        // print("  • Auto Logoff: ${channel.staffAutoLogOff}");
-
         return ChannelModel.fromJson(json);
       } else {
         print('❌ API returned status code ${response.statusCode}');

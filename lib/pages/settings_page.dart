@@ -10,7 +10,10 @@ import 'package:sahara_app/models/customer_account_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/modules/initialize_card_service.dart';
 import 'package:sahara_app/modules/nfc_functions.dart';
+import 'package:sahara_app/modules/reprint_service.dart';
+import 'package:sahara_app/modules/reverse_sale_service.dart';
 import 'package:sahara_app/pages/card_details_page.dart';
+import 'package:sahara_app/pages/reprint_receipt_page.dart';
 import 'package:sahara_app/pages/tap_card_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -23,11 +26,21 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-enum TapCardAction { initialize, format, viewUID, changePin, cardDetails,cashCardSales, cardSales }
+enum TapCardAction {
+  initialize,
+  format,
+  viewUID,
+  changePin,
+  cardDetails,
+  cashCardSales,
+  cardSales,
+  miniStatement,
+  topUp,
+  reverseTopUp,
+}
 
 class _SettingsPageState extends State<SettingsPage> {
-
-    ///CHANGE PIN FUNCTION
+  ///CHANGE PIN FUNCTION
   void handleChangePin() async {
     final pinData = await showDialog<Map<String, String>>(
       context: context,
@@ -42,13 +55,25 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                myPinTextField(oldPinController, 'Current PIN', 'Enter current 4-digit PIN'),
+                myPinTextField(
+                  controller: oldPinController,
+                  myLabelText: 'Current PIN',
+                  myHintText: 'Enter current 4-digit PIN',
+                ),
 
                 const SizedBox(height: 5),
-                myPinTextField(newPinController, 'New PIN', 'Enter new 4-digit PIN'),
+                myPinTextField(
+                  controller: newPinController,
+                  myLabelText: 'New PIN',
+                  myHintText: 'Enter new 4-digit PIN',
+                ),
 
                 const SizedBox(height: 5),
-                myPinTextField(confirmPinController, 'Confirm New PIN', 'Re-enter new PIN'),
+                myPinTextField(
+                  controller: confirmPinController,
+                  myLabelText: 'Confirm New PIN',
+                  myHintText: 'Re-enter new PIN',
+                ),
               ],
             ),
           ),
@@ -107,21 +132,432 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  //CHECK NETWORK FOR INITIALIZATION
+  // ignore: unused_element
+  Future<bool> _checkInternetConnection() async {
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
 
-    //CHECK NETWORK FOR INITIALIZATION
-    // ignore: unused_element
-    Future<bool> _checkInternetConnection() async {
-  try {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    
-    // Check if connected to WiFi or Mobile data
-    if (connectivityResult == ConnectivityResult.none) {
+      // Check if connected to WiFi or Mobile data
+      if (connectivityResult == ConnectivityResult.none) {
+        return false;
+      }
+      return true;
+    } catch (e) {
       return false;
     }
-    return true;
-  } catch (e) {
-    return false;
   }
+
+  //TRANSACTIONS FUNCS
+
+  //REVERSE SALE
+  //REVERSE SALE
+  Future<void> showReverseSaleDialog(BuildContext context) async {
+    final controllerReverseSale = TextEditingController();
+    String? errorMessage;
+    bool isLoading = false;
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Reverse Sale'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  myPinTextField(
+                    controller: controllerReverseSale,
+                    myLabelText: 'Enter Receipt Id',
+                    myHintText: '(e.g., TR5250815153110)',
+                    keyboardType: TextInputType.text,
+                    obscureText: false,
+                    maxLength: 20,
+                  ),
+                  if (isLoading) ...[
+                    SizedBox(height: 16),
+                    CircularProgressIndicator(),
+                    SizedBox(height: 8),
+                    Text('Reversing transaction...'),
+                  ],
+                  if (errorMessage != null) ...[
+                    SizedBox(height: 8),
+                    Text(errorMessage!, style: TextStyle(color: Colors.red, fontSize: 12)),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.of(context).pop();
+                        },
+                  child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                ),
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final receiptNumber = controllerReverseSale.text.trim();
+
+                          if (receiptNumber.isEmpty) {
+                            setState(() {
+                              errorMessage = 'Please enter a receipt number';
+                            });
+                            return;
+                          }
+
+                          // Show confirmation dialog first
+                          final shouldReverse = await _showConfirmationDialog(context, receiptNumber);
+                          if (!shouldReverse) return;
+
+                          setState(() {
+                            isLoading = true;
+                            errorMessage = null;
+                          });
+
+                          try {
+                            print('🔄 Reversing transaction: $receiptNumber');
+
+                            final result = await ReverseSaleService.reverseTransaction(
+                              originalRefNumber: receiptNumber,
+                              user: widget.user, // Assuming this dialog is in a widget with user access
+                            );
+
+                            setState(() {
+                              isLoading = false;
+                            });
+
+                            if (result['success']) {
+                              Navigator.of(context).pop(); // Close dialog
+
+                              // Show success message with details
+                              _showSuccessDialog(context, result);
+                            } else {
+                              setState(() {
+                                errorMessage = result['error'];
+                              });
+                            }
+                          } catch (e) {
+                            setState(() {
+                              isLoading = false;
+                              errorMessage = 'Error: $e';
+                            });
+                          }
+                        },
+                  child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Confirmation dialog before reversing
+  Future<bool> _showConfirmationDialog(BuildContext context, String receiptNumber) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Confirm Reversal'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 48),
+                  SizedBox(height: 16),
+                  Text('Are you sure you want to reverse this transaction?'),
+                  SizedBox(height: 8),
+                  Text('Receipt: $receiptNumber', style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 16),
+                  Text('This action cannot be undone.', style: TextStyle(color: Colors.red, fontSize: 12)),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(
+                    'Reverse',
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  // Success dialog showing reversal details
+  void _showSuccessDialog(BuildContext context, Map<String, dynamic> result) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 8),
+              Text('Reversal Successful'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Transaction has been reversed successfully.'),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+                child: Column(
+                  children: [
+                    _infoRow('Original Receipt:', result['originalRefNumber']),
+                    _infoRow('Reversal Receipt:', result['newRefNumber']),
+                    _infoRow('Status:', 'Reversed'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close success dialog
+              },
+              child: Text('OK', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper widget for info rows
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: TextStyle(fontFamily: 'Courier')),
+        ],
+      ),
+    );
+  }
+
+  //REPRINT RECEIPT
+  Future<void> showReceiptReprintDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    // ignore: unused_local_variable
+    String? errorMessage;
+    bool isLoading = false;
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // print(errorMessage);
+            return AlertDialog(
+              title: const Text('Receipt Reprint'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  myPinTextField(
+                    controller: controller,
+                    myLabelText: 'Enter Receipt Id',
+                    myHintText: '(e.g., TR5250815153110)',
+                    keyboardType: TextInputType.text,
+                    obscureText: false,
+                    maxLength: 20,
+                  ),
+                  // TextField(
+                  //   controller: controller,
+                  //   cursorColor: ColorsUniversal.buttonsColor,
+                  //   decoration: InputDecoration(
+                  //     labelText: 'Enter Receipt Id (e.g., TR5250815153110)',
+                  //     labelStyle: TextStyle(color: Colors.brown[300]),
+                  //     focusedBorder: UnderlineInputBorder(
+                  //       borderSide: BorderSide(color: ColorsUniversal.buttonsColor)
+                  //     ),
+                  //     errorText: errorMessage,
+                  //   ),
+                  // ),
+                  if (isLoading) ...[
+                    SizedBox(height: 16),
+                    CircularProgressIndicator(),
+                    SizedBox(height: 8),
+                    Text('Fetching receipt...'),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                  child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                ),
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final receiptNumber = controller.text.trim();
+
+                          if (receiptNumber.isEmpty) {
+                            setState(() {
+                              errorMessage = 'Please enter a receipt number';
+                            });
+                            return;
+                          }
+
+                          setState(() {
+                            isLoading = true;
+                            errorMessage = null;
+                          });
+
+                          try {
+                            print('🔄 Fetching receipt: $receiptNumber');
+
+                            final result = await ReprintService.getReceiptForReprint(
+                              refNumber: receiptNumber,
+                              user: widget.user,
+                            );
+
+                            setState(() {
+                              isLoading = false;
+                            });
+
+                            if (result['success']) {
+                              Navigator.of(context).pop(); // Close dialog
+
+                              // Navigate to simple reprint page
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ReprintReceiptPage(
+                                    user: widget.user,
+                                    apiData: result['data'],
+                                    refNumber: receiptNumber,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              setState(() {
+                                errorMessage = result['error'];
+                              });
+                            }
+                          } catch (e) {
+                            setState(() {
+                              isLoading = false;
+                              errorMessage = 'Error: $e';
+                            });
+                          }
+                        },
+                  child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  ///TOPUP TRANSACTION
+  ///TOPUP TRANSACTION
+Future<void> showTopUpTransactionDialog(BuildContext context) async {
+  final controller = TextEditingController();
+  String? errorMessage;
+
+  return showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Topup Account'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                myPinTextField(
+                  controller: controller,
+                  myLabelText: 'Enter TopUp Amount',
+                  myHintText: 'Amount (e.g., 1000)',
+                  keyboardType: TextInputType.number,
+                  obscureText: false,
+                  maxLength: 20,
+                ),
+                if (errorMessage != null) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    errorMessage!,
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+              ),
+              TextButton(
+                onPressed: () {
+                  final amountText = controller.text.trim();
+                  
+                  if (amountText.isEmpty) {
+                    setState(() {
+                      errorMessage = 'Please enter an amount';
+                    });
+                    return;
+                  }
+                  
+                  final amount = double.tryParse(amountText);
+                  if (amount == null || amount <= 0) {
+                    setState(() {
+                      errorMessage = 'Please enter a valid amount';
+                    });
+                    return;
+                  }
+                  
+                  if (amount < 10) {
+                    setState(() {
+                      errorMessage = 'Minimum top-up amount is Ksh 10';
+                    });
+                    return;
+                  }
+
+                  // Amount is valid, navigate to card scanning
+                  Navigator.pop(context); // Close dialog
+                  
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TapCardPage(
+                        user: widget.user, 
+                        action: TapCardAction.topUp,
+                        topUpAmount: amount, // PASS THE AMOUNT
+                      ),
+                    ),
+                  );
+                },
+                child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
 }
 
   @override
@@ -135,6 +571,7 @@ class _SettingsPageState extends State<SettingsPage> {
       'Reverse Sale',
     ];
 
+    //CARD ONPRESSED
     final Map<String, VoidCallback> cardItemActions = {
       'Card Details': () {
         Navigator.push(
@@ -198,6 +635,23 @@ class _SettingsPageState extends State<SettingsPage> {
       'Change Card Pin': () => handleChangePin(),
     };
 
+    //TRANSACTION ONPRESSED
+
+    final Map<String, VoidCallback> transactionItemActions = {
+      'Ministatement': () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.miniStatement),
+          ),
+        );
+      },
+      'Top Up': () => showTopUpTransactionDialog(context),
+      'Reverse Top Up': () {},
+      'Re-Print Sale': () => showReceiptReprintDialog(context),
+      'Reverse Sale': () => showReverseSaleDialog(context),
+    };
+
     return Scaffold(
       backgroundColor: ColorsUniversal.background,
       body: Padding(
@@ -227,6 +681,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: Text(item, style: TextStyle(fontSize: 16)),
                   tileColor: Colors.brown[100],
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: transactionItemActions[item],
                 ),
               ),
             ),
@@ -236,56 +691,3 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-        /**
-         * 'Initialize Card': () async {
-        bool hasInternet = await _checkInternetConnection();
-
-        if (!hasInternet) {
-          // Show snackbar
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.wifi_off, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('Check your internet connection', style: TextStyle(fontSize: 16))),
-                ],
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: 'Retry',
-                textColor: Colors.white,
-                onPressed: () {
-                  // Retry the initialization
-                  _checkInternetConnection().then((hasNet) {
-                    if (hasNet) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.initialize),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Still no internet connection'), backgroundColor: Colors.red),
-                      );
-                    }
-                  });
-                },
-              ),
-            ),
-          );
-          return;
-        }
-
-        // Internet available - proceed
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.initialize),
-          ),
-        );
-      },
-         */

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/helpers/ref_generator.dart';
 import 'package:sahara_app/models/payment_mode_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
@@ -97,10 +98,7 @@ class _CartPageState extends State<CartPage> {
                     Text('Quantity', style: TextStyle(fontSize: 12, color: Colors.black54)),
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.brown[200],
-                      ),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Colors.brown[200]),
                       child: Text(
                         '${item.quantity.toStringAsFixed(2)}L',
                         style: TextStyle(fontWeight: FontWeight.w600),
@@ -115,10 +113,7 @@ class _CartPageState extends State<CartPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Total',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                    ),
+                    Text('Total', style: TextStyle(fontSize: 12, color: Colors.black54)),
                     Text(
                       'Ksh ${total.toStringAsFixed(2)}',
                       style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -188,10 +183,7 @@ class _CartPageState extends State<CartPage> {
                   children: [
                     Container(
                       height: 40,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25),
-                        color: Colors.brown[200],
-                      ),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), color: Colors.brown[200]),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -227,10 +219,7 @@ class _CartPageState extends State<CartPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Amt: ${total.toStringAsFixed(0)}',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
+                    Text('Amt: ${total.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.w500)),
                     IconButton(
                       onPressed: () {
                         setState(() {
@@ -255,6 +244,141 @@ class _CartPageState extends State<CartPage> {
           ),
         ),
       ),
+    );
+  }
+
+  // Add this method to your class for the cash payment dialog
+  void _showCashPaymentDialog(BuildContext context) {
+    final double total = CartStorage().getTotalPrice();
+    final TextEditingController _cashController = TextEditingController(text: total.toStringAsFixed(0));
+
+    // Get the selected payment mode details
+    final box = Hive.box('payment_modes');
+    final rawModes = box.get('acceptedModes', defaultValue: []);
+    final savedModes = (rawModes as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .map((e) => PaymentModeModel.fromJson(e))
+        .toList();
+
+    PaymentModeModel? selectedMode;
+    for (var mode in savedModes) {
+      if (mode.payModeDisplayName == selectedPaymentMode) {
+        selectedMode = mode;
+        break;
+      }
+    }
+
+    // Debug print to see what payment mode we found
+    print("🎯 Selected Payment Mode: $selectedPaymentMode");
+    print("💳 Payment Mode ID: ${selectedMode?.payModeId}");
+    print("📝 Payment Mode Name: ${selectedMode?.payModeDisplayName}");
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: ColorsUniversal.background,
+              title: Text('${selectedPaymentMode ?? "Cash"} Payment', style: TextStyle(fontWeight: FontWeight.w500)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Amount Due:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                      Text('Ksh ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 18)),
+                    ],
+                  ),
+                  TextField(
+                    controller: _cashController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Enter Amount Received',
+                      errorText: errorText,
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                    ),
+                    cursorColor: ColorsUniversal.buttonsColor,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+                  onPressed: () async {
+                    final entered = _cashController.text.trim();
+                    if (entered.isEmpty) {
+                      setState(() => errorText = 'Amount is required');
+                      return;
+                    }
+
+                    final amount = double.tryParse(entered);
+                    if (amount == null || amount < total) {
+                      setState(() => errorText = 'Amount must be at least Ksh ${total.toStringAsFixed(0)}');
+                      return;
+                    }
+
+                    final prefs = await SharedPreferences.getInstance();
+                    final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
+                    final channelName = prefs.getString('channelName') ?? 'CMB Station';
+                    final termNumber = prefs.getString('termNumber') ?? '8b7118e04fecbaf2';
+                    final refNumber = await RefGenerator.generate();
+
+                    print("🎯 Final data for Cash-Only sale:");
+                    print("💰 Payment: ${selectedMode?.payModeDisplayName ?? 'Cash'} (${amount})");
+                    print("🆔 Payment Mode ID: ${selectedMode?.payModeId ?? 1}");
+                    print("📝 No card data (cash-only)");
+
+                    Navigator.pop(context); // close dialog
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ReceiptPrint(
+                          user: widget.user,
+                          cartItems: cartItems,
+                          cashGiven: amount,
+                          customerName: 'Cash Customer', // Better than empty string
+                          card: 'N/A',
+                          accountType: 'Cash Sale',
+                          vehicleNumber: 'N/A',
+                          showCardDetails: false, // No card details for cash-only
+                          companyName: companyName,
+                          channelName: channelName,
+                          refNumber: refNumber,
+                          termNumber: termNumber,
+                          // NO CARD DATA for cash-only sales:
+                          cardUID: null,
+                          customerAccountNo: null,
+                          discount: null,
+                          clientTotal: null,
+                          customerBalance: null,
+                          accountProducts: null,
+                          // PASS THE REAL PAYMENT MODE:
+                          paymentModeId: selectedMode?.payModeId ?? 2,
+                          paymentModeName: selectedMode?.payModeDisplayName ?? 'Cash',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('OK', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -309,7 +433,7 @@ class _CartPageState extends State<CartPage> {
                 itemCount: cartItems.length,
                 itemBuilder: (context, index) {
                   final item = cartItems[index];
-                  
+
                   // ✅ Show different cart item based on current mode
                   return currentMode == OperationMode.auto
                       ? _buildAutoModeCartItem(item, index)
@@ -317,7 +441,7 @@ class _CartPageState extends State<CartPage> {
                 },
               ),
             ),
-            
+
             // Total and checkout section (same for both modes)
             Align(
               alignment: Alignment.centerRight,
@@ -329,7 +453,7 @@ class _CartPageState extends State<CartPage> {
                 ),
               ),
             ),
-            
+
             // Payment and checkout section (same for both modes)
             Column(
               children: [
@@ -357,7 +481,115 @@ class _CartPageState extends State<CartPage> {
                 ),
                 SizedBox(height: 10),
                 myButton(context, () {
-                  // Your existing checkout logic remains the same...
+                  // 🔒 Check if cart is empty
+                  if (CartStorage().cartItems.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Please add some products to checkout!'),
+                        duration: Duration(seconds: 1),
+                        backgroundColor: Colors.grey,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // 🔒 Check if payment mode is not selected
+                  if (selectedPaymentMode == null || selectedPaymentMode!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Please select a payment mode'),
+                        duration: Duration(seconds: 1),
+                        backgroundColor: Colors.grey,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // 🔍 Get the selected payment mode from Hive
+                  final box = Hive.box('payment_modes');
+                  final rawModes = box.get('acceptedModes', defaultValue: []);
+
+                  // Safely convert the dynamic list to a list of PaymentModeModel
+                  final savedModes = (rawModes as List)
+                      .map((e) => Map<String, dynamic>.from(e as Map))
+                      .map((e) => PaymentModeModel.fromJson(e))
+                      .toList();
+
+                  PaymentModeModel? selectedMode;
+                  for (var mode in savedModes) {
+                    if (mode.payModeDisplayName == selectedPaymentMode) {
+                      selectedMode = mode;
+                      break;
+                    }
+                  }
+
+                  // 💳 Check if Internal Card is selected
+                  if (selectedMode != null && selectedMode.payModeCategory == 'Internal Card') {
+                    // Navigate directly to card sales
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            TapCardPage(user: widget.user, action: TapCardAction.cardSales, cartItems: cartItems),
+                      ),
+                    );
+                    return;
+                  }
+                  if (selectedMode == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Selected payment mode not found. Please re-sync.'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: Colors.grey,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // 💰 For all other payment modes (Cash, etc.) - show the card dialog
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: Text('Tap Card', style: TextStyle(fontSize: 22)),
+                      content: Text('Do you have a card?', style: TextStyle(fontSize: 20)),
+                      actions: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            // Show cash payment dialog
+                            _showCashPaymentDialog(context);
+                          },
+                          child: Text('NO', style: TextStyle(color: Colors.white, fontSize: 16)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+                          onPressed: () {
+                            Navigator.pop(context); // Close dialog
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TapCardPage(
+                                  user: widget.user,
+                                  action: TapCardAction.cashCardSales,
+                                  cartItems: cartItems,
+                                  selectedPaymentMode: selectedPaymentMode,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Text('YES', style: TextStyle(color: Colors.white, fontSize: 16)),
+                        ),
+                      ],
+                    ),
+                  );
                 }, 'Check Out'),
               ],
             ),

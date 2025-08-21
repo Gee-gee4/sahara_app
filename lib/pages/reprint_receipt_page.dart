@@ -9,12 +9,14 @@ class ReprintReceiptPage extends StatefulWidget {
   final StaffListModel user;
   final Map<String, dynamic> apiData;
   final String refNumber;
+  final String terminalName;
 
   const ReprintReceiptPage({
     super.key,
     required this.user,
     required this.apiData,
     required this.refNumber,
+    required this.terminalName
   });
 
   @override
@@ -134,7 +136,7 @@ class _ReprintReceiptPageState extends State<ReprintReceiptPage> {
                 const SizedBox(height: 8),
                 
                 // Transaction info
-                Text('TERM# ${ticket['terminalName'] ?? 'N/A'}', style: receiptStyle),
+                Text('TERM# ${widget.terminalName}', style: receiptStyle),
                 Text('REF# ${widget.refNumber}', style: receiptStyle),
                 const Divider(),
 

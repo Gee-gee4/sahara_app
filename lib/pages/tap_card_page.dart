@@ -25,6 +25,7 @@ import 'package:sahara_app/pages/card_details_page.dart';
 import 'package:sahara_app/pages/mini_statement_page.dart';
 import 'package:sahara_app/pages/receipt_print.dart';
 import 'package:sahara_app/pages/settings_page.dart';
+import 'package:sahara_app/pages/top_up_page.dart';
 import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -38,14 +39,14 @@ class TapCardPage extends StatefulWidget {
     this.extraData,
     this.cartItems,
     this.selectedPaymentMode,
-    this.topUpAmount
+    this.topUpAmount,
   });
   final StaffListModel user;
   final TapCardAction action;
   final Map<String, String>? extraData;
   final List<CartItem>? cartItems;
   final String? selectedPaymentMode;
-   final double? topUpAmount;
+  final double? topUpAmount;
 
   @override
   State<TapCardPage> createState() => _TapCardPageState();
@@ -276,7 +277,6 @@ class _TapCardPageState extends State<TapCardPage> {
                     final prefs = await SharedPreferences.getInstance();
                     final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
                     final channelName = prefs.getString('channelName') ?? 'CMB Station';
-                    // final termNumber = prefs.getString('termNumber') ?? '8b7118e04fecbaf2';
                     final refNumber = await RefGenerator.generate();
                     final deviceId = await getSavedOrFetchDeviceId();
 
@@ -504,6 +504,8 @@ class _TapCardPageState extends State<TapCardPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.grey, duration: Duration(seconds: 2)));
+    Navigator.of(context).pop(); // Pop the dialog
+    // if (mounted) Navigator.of(context).pop(); // Then pop the page
   }
 
   // Show timeout dialog
@@ -754,8 +756,8 @@ class _TapCardPageState extends State<TapCardPage> {
                 // PIN is correct, go to receipt with REAL card data
                 final prefs = await SharedPreferences.getInstance();
                 final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
-                final channelName = prefs.getString('channelName') ?? 'CMB Station';
-                final termNumber = prefs.getString('termNumber') ?? '8b7118e04fecbaf2';
+                final channelName = prefs.getString('channelName') ?? 'Station';
+                final deviceId = await getSavedOrFetchDeviceId();
                 final refNumber = await RefGenerator.generate();
 
                 print("🎯 Final data being passed to receipt:");
@@ -785,7 +787,7 @@ class _TapCardPageState extends State<TapCardPage> {
                       companyName: companyName,
                       channelName: channelName,
                       refNumber: refNumber,
-                      termNumber: termNumber,
+                      termNumber: deviceId,
                       // PASS THE REAL CARD DATA:
                       cardUID: cardUID, // Real card UID from NFC
                       customerAccountNo: int.tryParse(accountNo),
@@ -875,639 +877,598 @@ class _TapCardPageState extends State<TapCardPage> {
         });
         break;
       case TapCardAction.miniStatement:
-      result = "Ministatement";
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+        result = "Ministatement";
+        WidgetsBinding.instance.addPostFrameCallback((_) {
           _handleMiniStatement(context);
           //function
         });
         break;
       case TapCardAction.topUp:
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleTopUp(context);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleTopUp(context);
           //function
         });
         break;
-    
+
       case TapCardAction.reverseTopUp:
         break;
     }
   }
 
   ///TOP UP TRANSACTION
-  
-// Add this method to your TapCardPage for handling topup
-Future<void> _handleTopUp(BuildContext context) async {
-  print("💰 Scanning card for top-up...");
-  bool shouldDismissSpinner = true;
+  Future<void> _handleTopUp(BuildContext context) async {
+    final deviceId = await getSavedOrFetchDeviceId();
+    print("💰 Scanning card for top-up...");
+    bool shouldDismissSpinner = true;
 
-  try {
-    // Step 1: Start NFC polling with spinner
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Center(
-        child: SpinKitCircle(
-          size: 70,
-          duration: Duration(milliseconds: 1000),
-          itemBuilder: (context, index) {
-            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-            final color = colors[index % colors.length];
-            return DecoratedBox(
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            );
-          },
-        ),
-      ),
-    );
-
-    // Poll for card with timeout - EXACTLY like mini statement
-    final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
-      Duration(seconds: 30),
-      onTimeout: () {
-        throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
-      },
-    );
-
-    final nfc = NfcFunctions();
-
-    // Step 2: Read account number from card - EXACTLY like mini statement
-    final accountResponse = await nfc.readSectorBlock(
-      sectorIndex: 1,
-      blockSectorIndex: 0,
-      useDefaultKeys: false, // Use POS keys
-    );
-
-    if (accountResponse.status != NfcMessageStatus.success) {
-      await FlutterNfcKit.finish();
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Close spinner
-      shouldDismissSpinner = false;
-      Navigator.of(context).pop(); // Close current page
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not read card data. Please try again.'),
-          backgroundColor: Colors.grey,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      print("❌ Failed to read account number: ${accountResponse.data}");
-      return;
-    }
-
-    // Step 3: Read PIN from card - EXACTLY like mini statement
-    final pinResponse = await nfc.readSectorBlock(
-      sectorIndex: 2,
-      blockSectorIndex: 0,
-      useDefaultKeys: false, // Use POS keys
-    );
-
-    await FlutterNfcKit.finish(); // End NFC session
-
-    if (pinResponse.status != NfcMessageStatus.success) {
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Dismiss spinner
-      shouldDismissSpinner = false;
-      print("❌ Failed to read PIN from card: ${pinResponse.data}");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not read card PIN. Card may not be initialized.'),
-          backgroundColor: Colors.grey,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Step 4: Extract and validate account number and PIN - EXACTLY like mini statement
-    final accountNo = accountResponse.data.replaceAll(RegExp(r'[^0-9]'), '');
-    final cardPin = pinResponse.data.replaceAll(';', '').trim();
-
-    print("🎯 Account number from card: $accountNo");
-    print("🔐 PIN from card: $cardPin");
-    print("💰 Top-up amount: ${widget.topUpAmount}");
-
-    if (accountNo.isEmpty || accountNo == '0') {
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Dismiss spinner
-      shouldDismissSpinner = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No assigned account found on this card.'),
-          backgroundColor: Colors.grey,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    if (widget.topUpAmount == null || widget.topUpAmount! <= 0) {
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Close spinner
-      shouldDismissSpinner = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid top-up amount.'),
-          backgroundColor: Colors.grey,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Step 5: Dismiss spinner before showing PIN dialog - EXACTLY like mini statement
-    if (!context.mounted) return;
-    Navigator.of(context).pop(); // Dismiss spinner
-    shouldDismissSpinner = false;
-
-    // Show PIN confirmation dialog
-    final pinValid = await _showTopUpPinDialog(context, accountNo, cardPin, widget.topUpAmount!);
-    if (!pinValid) {
-      print("❌ PIN validation failed or was cancelled");
-      return;
-    }
-
-    // Step 6: PIN is correct! Show loading state for API call - EXACTLY like mini statement
-    print("✅ PIN verified successfully");
-
-    if (!context.mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: SpinKitCircle(
-          size: 70,
-          duration: Duration(milliseconds: 1000),
-          itemBuilder: (context, index) {
-            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-            final color = colors[index % colors.length];
-            return DecoratedBox(
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            );
-          },
-        ),
-      ),
-    );
-    shouldDismissSpinner = true;
-
-    final result = await TopUpService.processTopUp(
-      accountNo: accountNo,
-      topUpAmount: widget.topUpAmount!,
-      user: widget.user,
-    );
-
-    // Close loading dialog
-    if (!context.mounted) return;
-    Navigator.of(context).pop();
-    shouldDismissSpinner = false;
-
-    if (result['success']) {
-      // Show success dialog
-      _showTopUpSuccessDialog(context, result);
-    } else {
-      print("❌ Top-up failed: ${result['error']}");
+    try {
+      // Step 1: Start NFC polling with spinner
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext dialogContext) => AlertDialog(
-          title: const Text('Top-Up Failed'),
-          content: Text(
-            'Top-up could not be completed.\n\n${result['error']}',
-            style: TextStyle(fontSize: 16),
+        builder: (_) => Center(
+          child: SpinKitCircle(
+            size: 70,
+            duration: Duration(milliseconds: 1000),
+            itemBuilder: (context, index) {
+              final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+              final color = colors[index % colors.length];
+              return DecoratedBox(
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              );
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Pop dialog
-                if (context.mounted) Navigator.of(context).pop(); // Pop page
-              },
-              child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
-            ),
-          ],
         ),
       );
-    }
 
-  } catch (e) {
-    await FlutterNfcKit.finish(); // Always end NFC session
+      // Poll for card with timeout - EXACTLY like mini statement
+      // ignore: unused_local_variable
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
 
-    // Handle timeout specifically - EXACTLY like mini statement
-    if (e is TimeoutException) {
+      final nfc = NfcFunctions();
+
+      // Step 2: Read account number from card - EXACTLY like mini statement
+      final accountResponse = await nfc.readSectorBlock(
+        sectorIndex: 1,
+        blockSectorIndex: 0,
+        useDefaultKeys: false, // Use POS keys
+      );
+
+      if (accountResponse.status != NfcMessageStatus.success) {
+        await FlutterNfcKit.finish();
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close spinner
+        shouldDismissSpinner = false;
+        Navigator.of(context).pop(); // Close current page
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card data. Please try again.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        print("❌ Failed to read account number: ${accountResponse.data}");
+        return;
+      }
+
+      // Step 3: Read PIN from card - EXACTLY like mini statement
+      final pinResponse = await nfc.readSectorBlock(
+        sectorIndex: 2,
+        blockSectorIndex: 0,
+        useDefaultKeys: false, // Use POS keys
+      );
+
+      await FlutterNfcKit.finish(); // End NFC session
+
+      if (pinResponse.status != NfcMessageStatus.success) {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Dismiss spinner
+        shouldDismissSpinner = false;
+        print("❌ Failed to read PIN from card: ${pinResponse.data}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read card PIN. Card may not be initialized.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      // Step 4: Extract and validate account number and PIN - EXACTLY like mini statement
+      final accountNo = accountResponse.data.replaceAll(RegExp(r'[^0-9]'), '');
+      final cardPin = pinResponse.data.replaceAll(';', '').trim();
+
+      print("🎯 Account number from card: $accountNo");
+      print("🔐 PIN from card: $cardPin");
+      print("💰 Top-up amount: ${widget.topUpAmount}");
+
+      if (accountNo.isEmpty || accountNo == '0') {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Dismiss spinner
+        shouldDismissSpinner = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No assigned account found on this card.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      if (widget.topUpAmount == null || widget.topUpAmount! <= 0) {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close spinner
+        shouldDismissSpinner = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid top-up amount.'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      // Step 5: Dismiss spinner before showing PIN dialog - EXACTLY like mini statement
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Dismiss spinner
+      shouldDismissSpinner = false;
+
+      // Show PIN confirmation dialog
+      final pinValid = await _showTopUpPinDialog(context, accountNo, cardPin, widget.topUpAmount!);
+      if (!pinValid) {
+        print("❌ PIN validation failed or was cancelled");
+        return;
+      }
+
+      // Step 6: PIN is correct! Show loading state for API call - EXACTLY like mini statement
+      print("✅ PIN verified successfully");
+
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: SpinKitCircle(
+            size: 70,
+            duration: Duration(milliseconds: 1000),
+            itemBuilder: (context, index) {
+              final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+              final color = colors[index % colors.length];
+              return DecoratedBox(
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              );
+            },
+          ),
+        ),
+      );
+      shouldDismissSpinner = true;
+
+      final result = await TopUpService.processTopUp(
+        accountNo: accountNo,
+        topUpAmount: widget.topUpAmount!,
+        user: widget.user,
+      );
+
+      // Close loading dialog
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      shouldDismissSpinner = false;
+
+      if (result['success']) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TopUpPage(
+              user: widget.user,
+              accountNo: accountNo,
+              staff: widget.user,
+              topUpData: result['data'],
+              refNumber: result['refNumber'],
+              termNumber: deviceId,
+              amount: result['amount'],
+            ),
+          ),
+        );
+      } else {
+        print("❌ Top-up failed: ${result['error']}");
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text('Top-Up Failed'),
+            content: Text('Top-up could not be completed.\n\n${result['error']}', style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (context.mounted) Navigator.of(context).pop(); // Pop page
+                },
+                child: Text('OK', style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      await FlutterNfcKit.finish(); // Always end NFC session
+
+      // Handle timeout specifically - EXACTLY like mini statement
+      if (e is TimeoutException) {
+        if (!context.mounted) return;
+
+        if (shouldDismissSpinner) {
+          Navigator.of(context).pop(); // Dismiss spinner
+          shouldDismissSpinner = false;
+        }
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: const Text("Timeout"),
+            content: const Text("No card detected. Please try again.", style: TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Pop dialog
+                  if (context.mounted) Navigator.of(context).pop(); // Pop page
+                },
+                child: Text("OK", style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Handle other errors - EXACTLY like mini statement
       if (!context.mounted) return;
 
       if (shouldDismissSpinner) {
         Navigator.of(context).pop(); // Dismiss spinner
-        shouldDismissSpinner = false;
       }
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext dialogContext) => AlertDialog(
-          title: const Text("Timeout"),
-          content: const Text("No card detected. Please try again.", style: TextStyle(fontSize: 16)),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Pop dialog
-                if (context.mounted) Navigator.of(context).pop(); // Pop page
-              },
-              child: Text("OK", style: TextStyle(fontSize: 18, color: ColorsUniversal.buttonsColor)),
-            ),
-          ],
+      print("❌ Exception occurred: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error occurred: ${e.toString()}'),
+          backgroundColor: Colors.grey,
+          duration: const Duration(seconds: 3),
         ),
       );
-      return;
-    }
-
-    // Handle other errors - EXACTLY like mini statement
-    if (!context.mounted) return;
-
-    if (shouldDismissSpinner) {
-      Navigator.of(context).pop(); // Dismiss spinner
-    }
-
-    print("❌ Exception occurred: $e");
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error occurred: ${e.toString()}'),
-        backgroundColor: Colors.grey,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  } finally {
-    // Ensure spinner is dismissed if still showing - EXACTLY like mini statement
-    if (shouldDismissSpinner && context.mounted) {
-      try {
-        Navigator.of(context).pop();
-      } catch (e) {
-        // Spinner might already be dismissed
+    } finally {
+      // Ensure spinner is dismissed if still showing - EXACTLY like mini statement
+      if (shouldDismissSpinner && context.mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (e) {
+          // Spinner might already be dismissed
+        }
       }
     }
   }
-}
 
-// PIN dialog for top-up confirmation
-Future<bool> _showTopUpPinDialog(BuildContext context, String accountNo, String correctPin, double amount) async {
-  bool pinVerified = false;
+  // PIN dialog for top-up confirmation
+  Future<bool> _showTopUpPinDialog(BuildContext context, String accountNo, String correctPin, double amount) async {
+    bool pinVerified = false;
 
-  await showDialog<String>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      final pinController = TextEditingController();
-      return AlertDialog(
-        title: const Text('Confirm Top-Up'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Account: $accountNo', style: TextStyle(fontSize: 16)),
-            Text('Amount: Ksh ${amount.toStringAsFixed(2)}', 
-                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ColorsUniversal.buttonsColor)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pinController,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              decoration: InputDecoration(
-                hintText: 'Enter 4-digit PIN to confirm',
-                border: OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: ColorsUniversal.buttonsColor)
-                ),
-              ),
-              autofocus: true,
-              cursorColor: ColorsUniversal.buttonsColor,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
-          ),
-          TextButton(
-            onPressed: () {
-              String pin = pinController.text;
-              if (pin.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('PIN cannot be empty'), backgroundColor: Colors.grey)
-                );
-                return;
-              }
-              if (pin.length != 4) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('PIN must be 4 digits'), backgroundColor: Colors.grey)
-                );
-                return;
-              }
-              if (pin != correctPin) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Wrong PIN. Try again.'), backgroundColor: Colors.grey)
-                );
-                return;
-              }
-              pinVerified = true;
-              Navigator.of(context).pop();
-            },
-            child: Text('CONFIRM TOP-UP', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      );
-    },
-  );
-
-  return pinVerified;
-}
-
-// Success dialog for top-up
-void _showTopUpSuccessDialog(BuildContext context, Map<String, dynamic> result) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 28),
-            SizedBox(width: 8),
-            Text('Top-Up Successful'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Account has been topped up successfully.'),
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  _infoRow('Amount:', 'Ksh ${result['amount'].toStringAsFixed(2)}'),
-                  _infoRow('Reference:', result['refNumber']),
-                  _infoRow('Status:', 'Completed'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close success dialog
-              Navigator.of(context).pop(); // Go back to previous page
-            },
-            child: Text('OK', style: TextStyle(color: ColorsUniversal.buttonsColor)),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-  ///TRANSACTION MINISTATEMENT
-  // Add this method to your TapCardPage for mini statement
-Future<void> _handleMiniStatement(BuildContext context) async {
-  print("📡 Scanning card for mini statement...");
-  bool shouldDismissSpinner = true;
-
-  try {
-    // Step 1: Start NFC polling with spinner
-    showDialog(
+    await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Center(
-        child: SpinKitCircle(
-          size: 70,
-          duration: Duration(milliseconds: 1000),
-          itemBuilder: (context, index) {
-            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-            final color = colors[index % colors.length];
-            return DecoratedBox(
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            );
-          },
-        ),
-      ),
-    );
-
-    // Poll for card with timeout
-    // ignore: unused_local_variable
-    final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
-      Duration(seconds: 30),
-      onTimeout: () {
-        throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+      builder: (context) {
+        final pinController = TextEditingController();
+        return AlertDialog(
+          title: const Text('Confirm Top-Up'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Account: $accountNo', style: TextStyle(fontSize: 16)),
+              Text(
+                'Amount: Ksh ${amount.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ColorsUniversal.buttonsColor),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                decoration: InputDecoration(
+                  hintText: 'Enter 4-digit PIN to confirm',
+                  border: OutlineInputBorder(),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                ),
+                autofocus: true,
+                cursorColor: ColorsUniversal.buttonsColor,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+            ),
+            TextButton(
+              onPressed: () {
+                String pin = pinController.text;
+                if (pin.isEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('PIN cannot be empty'), backgroundColor: Colors.grey));
+                  return;
+                }
+                if (pin.length != 4) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('PIN must be 4 digits'), backgroundColor: Colors.grey));
+                  return;
+                }
+                if (pin != correctPin) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Wrong PIN. Try again.'), backgroundColor: Colors.grey));
+                  return;
+                }
+                pinVerified = true;
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'CONFIRM TOP-UP',
+                style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
       },
     );
 
-    final nfc = NfcFunctions();
+    return pinVerified;
+  }
 
-    // Step 2: Read account number from card
-    final accountResponse = await nfc.readSectorBlock(
-      sectorIndex: 1,
-      blockSectorIndex: 0,
-      useDefaultKeys: false,
-    );
+  ///TRANSACTION MINISTATEMENT
+  // Add this method to your TapCardPage for mini statement
+  Future<void> _handleMiniStatement(BuildContext context) async {
+    print("📡 Scanning card for mini statement...");
+    bool shouldDismissSpinner = true;
 
-    if (accountResponse.status != NfcMessageStatus.success) {
-      await FlutterNfcKit.finish();
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Close spinner
-      shouldDismissSpinner = false;
-      _showErrorMessage('Could not read card data. Please try again.');
-      return;
-    }
-
-    // Step 3: Read PIN from card
-    final pinResponse = await nfc.readSectorBlock(
-      sectorIndex: 2,
-      blockSectorIndex: 0,
-      useDefaultKeys: false,
-    );
-
-    await FlutterNfcKit.finish();
-
-    if (pinResponse.status != NfcMessageStatus.success) {
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Close spinner
-      shouldDismissSpinner = false;
-      _showErrorMessage('Could not read card PIN.');
-      return;
-    }
-
-    // Step 4: Extract account number and PIN
-    final accountNo = accountResponse.data.replaceAll(RegExp(r'[^0-9]'), '');
-    final cardPin = pinResponse.data.replaceAll(';', '').trim();
-
-    print("🎯 Account number: $accountNo");
-    print("🔐 PIN from card: $cardPin");
-
-    if (accountNo.isEmpty || accountNo == '0') {
-      if (!context.mounted) return;
-      Navigator.of(context).pop(); // Close spinner
-      shouldDismissSpinner = false;
-      _showErrorMessage('No assigned account found on this card.');
-      return;
-    }
-
-    // Step 5: Dismiss spinner and show PIN dialog
-    if (!context.mounted) return;
-    Navigator.of(context).pop(); // Close spinner
-    shouldDismissSpinner = false;
-
-    // Show PIN dialog
-    final pinValid = await _showMiniStatementPinDialog(context, accountNo, cardPin);
-    if (!pinValid) {
-      print("❌ PIN validation failed");
-      return;
-    }
-
-    // Step 6: PIN verified, fetch mini statement
-    print("✅ PIN verified, fetching mini statement...");
-    
-    // Show loading again
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Center(
-        child: SpinKitCircle(
-          size: 70,
-          duration: Duration(milliseconds: 1000),
-          itemBuilder: (context, index) {
-            final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-            final color = colors[index % colors.length];
-            return DecoratedBox(
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            );
-          },
-        ),
-      ),
-    );
-    shouldDismissSpinner = true;
-
-    final result = await MiniStatementService.fetchMiniStatement(
-      accountNumber: accountNo,
-      user: widget.user,
-    );
-
-    if (!context.mounted) return;
-    Navigator.of(context).pop(); // Close loading
-    shouldDismissSpinner = false;
-
-    if (result['success']) {
-      // Navigate to mini statement page
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MiniStatementPage(
-            user: widget.user,
-            accountDetails: result['accountDetails'],
-            transactions: result['transactions'],
+    try {
+      // Step 1: Start NFC polling with spinner
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(
+          child: SpinKitCircle(
+            size: 70,
+            duration: Duration(milliseconds: 1000),
+            itemBuilder: (context, index) {
+              final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+              final color = colors[index % colors.length];
+              return DecoratedBox(
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              );
+            },
           ),
         ),
       );
-    } else {
-      _showErrorMessage(result['error']);
-    }
 
-  } catch (e) {
-    await FlutterNfcKit.finish();
+      // Poll for card with timeout
+      // ignore: unused_local_variable
+      final tag = await FlutterNfcKit.poll(timeout: Duration(seconds: 30)).timeout(
+        Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('No card detected within 30 seconds', Duration(seconds: 30));
+        },
+      );
 
-    if (e is TimeoutException) {
+      final nfc = NfcFunctions();
+
+      // Step 2: Read account number from card
+      final accountResponse = await nfc.readSectorBlock(sectorIndex: 1, blockSectorIndex: 0, useDefaultKeys: false);
+
+      if (accountResponse.status != NfcMessageStatus.success) {
+        await FlutterNfcKit.finish();
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close spinner
+        shouldDismissSpinner = false;
+        _showErrorMessage('Could not read card data. Please try again.');
+        return;
+      }
+
+      // Step 3: Read PIN from card
+      final pinResponse = await nfc.readSectorBlock(sectorIndex: 2, blockSectorIndex: 0, useDefaultKeys: false);
+
+      await FlutterNfcKit.finish();
+
+      if (pinResponse.status != NfcMessageStatus.success) {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close spinner
+        shouldDismissSpinner = false;
+        _showErrorMessage('Could not read card PIN.');
+        return;
+      }
+
+      // Step 4: Extract account number and PIN
+      final accountNo = accountResponse.data.replaceAll(RegExp(r'[^0-9]'), '');
+      final cardPin = pinResponse.data.replaceAll(';', '').trim();
+
+      print("🎯 Account number: $accountNo");
+      print("🔐 PIN from card: $cardPin");
+
+      if (accountNo.isEmpty || accountNo == '0') {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close spinner
+        shouldDismissSpinner = false;
+        _showErrorMessage('No assigned account found on this card.');
+        return;
+      }
+
+      // Step 5: Dismiss spinner and show PIN dialog
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close spinner
+      shouldDismissSpinner = false;
+
+      // Show PIN dialog
+      final pinValid = await _showMiniStatementPinDialog(context, accountNo, cardPin);
+      if (!pinValid) {
+        print("❌ PIN validation failed");
+        return;
+      }
+
+      // Step 6: PIN verified, fetch mini statement
+      print("✅ PIN verified, fetching mini statement...");
+
+      // Show loading again
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(
+          child: SpinKitCircle(
+            size: 70,
+            duration: Duration(milliseconds: 1000),
+            itemBuilder: (context, index) {
+              final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
+              final color = colors[index % colors.length];
+              return DecoratedBox(
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              );
+            },
+          ),
+        ),
+      );
+      shouldDismissSpinner = true;
+
+      final result = await MiniStatementService.fetchMiniStatement(accountNumber: accountNo, user: widget.user);
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading
+      shouldDismissSpinner = false;
+      final prefs = await SharedPreferences.getInstance();
+      final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
+      final channelName = prefs.getString('channelName') ?? 'Station';
+      final deviceId = await getSavedOrFetchDeviceId();
+      final refNumber = await RefGenerator.generate();
+
+      if (result['success']) {
+        // Navigate to mini statement page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MiniStatementPage(
+              user: widget.user,
+              accountDetails: result['accountDetails'],
+              transactions: result['transactions'],
+              channelName: channelName,
+              companyName: companyName,
+              termNumber: deviceId,
+              refNumber: refNumber,
+            ),
+          ),
+        );
+      } else {
+        _showErrorMessage(result['error']);
+      }
+    } catch (e) {
+      await FlutterNfcKit.finish();
+
+      if (e is TimeoutException) {
+        if (!context.mounted) return;
+        if (shouldDismissSpinner) {
+          Navigator.of(context).pop();
+          shouldDismissSpinner = false;
+        }
+        _showTimeoutDialog();
+        return;
+      }
+
       if (!context.mounted) return;
       if (shouldDismissSpinner) {
         Navigator.of(context).pop();
-        shouldDismissSpinner = false;
       }
-      _showTimeoutDialog();
-      return;
+      _showErrorMessage('Error: ${e.toString()}');
     }
-
-    if (!context.mounted) return;
-    if (shouldDismissSpinner) {
-      Navigator.of(context).pop();
-    }
-    _showErrorMessage('Error: ${e.toString()}');
   }
-}
 
-// PIN dialog for mini statement
-Future<bool> _showMiniStatementPinDialog(BuildContext context, String accountNo, String correctPin) async {
-  bool pinVerified = false;
+  // PIN dialog for mini statement
+  Future<bool> _showMiniStatementPinDialog(BuildContext context, String accountNo, String correctPin) async {
+    bool pinVerified = false;
 
-  await showDialog<String>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      final pinController = TextEditingController();
-      return AlertDialog(
-        title: const Text('Enter PIN for Mini Statement'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Account: $accountNo', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pinController,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              decoration: InputDecoration(
-                hintText: 'Enter 4-digit PIN',
-                border: OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: ColorsUniversal.buttonsColor)
+    await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final pinController = TextEditingController();
+        return AlertDialog(
+          title: const Text('Enter PIN for Mini Statement'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Account: $accountNo', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                decoration: InputDecoration(
+                  hintText: 'Enter 4-digit PIN',
+                  border: OutlineInputBorder(),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
                 ),
+                autofocus: true,
+                cursorColor: ColorsUniversal.buttonsColor,
               ),
-              autofocus: true,
-              cursorColor: ColorsUniversal.buttonsColor,
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+            ),
+            TextButton(
+              onPressed: () {
+                String pin = pinController.text;
+                if (pin.isEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('PIN cannot be empty'), backgroundColor: Colors.grey));
+                  return;
+                }
+                if (pin.length != 4) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('PIN must be 4 digits'), backgroundColor: Colors.grey));
+                  return;
+                }
+                if (pin != correctPin) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Wrong PIN. Try again.'), backgroundColor: Colors.grey));
+                  return;
+                }
+                pinVerified = true;
+                Navigator.of(context).pop();
+              },
+              child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 18)),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
-          ),
-          TextButton(
-            onPressed: () {
-              String pin = pinController.text;
-              if (pin.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('PIN cannot be empty'), backgroundColor: Colors.grey)
-                );
-                return;
-              }
-              if (pin.length != 4) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('PIN must be 4 digits'), backgroundColor: Colors.grey)
-                );
-                return;
-              }
-              if (pin != correctPin) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Wrong PIN. Try again.'), backgroundColor: Colors.grey)
-                );
-                return;
-              }
-              pinVerified = true;
-              Navigator.of(context).pop();
-            },
-            child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 18)),
-          ),
-        ],
-      );
-    },
-  );
+        );
+      },
+    );
 
-  return pinVerified;
-}
-  
+    return pinVerified;
+  }
 
   /// I N I T I A L I Z E  C A R D
 
@@ -2968,10 +2929,10 @@ ${completed ? '✅ Portal updated successfully!' : '⚠️ Portal update failed 
                                 await _handleOnlyCardSales();
                                 break;
                               case TapCardAction.miniStatement:
-                              await  _handleMiniStatement(context);
+                                await _handleMiniStatement(context);
                                 break;
                               case TapCardAction.topUp:
-                              await _handleTopUp(context);
+                                await _handleTopUp(context);
                                 break;
                               case TapCardAction.reverseTopUp:
                                 break;

@@ -1,4 +1,4 @@
-// lib/services/reverse_sale_service.dart
+// lib/services/reverse_topup_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sahara_app/helpers/device_id_helper.dart';
@@ -6,30 +6,29 @@ import 'package:sahara_app/helpers/ref_generator.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 
-class ReverseSaleService {
-
+class ReverseTopUpService {
   static Future<String?> get baseUrl async {
-    final url = await apiUrl(); // already implemented in your code
+    final url = await apiUrl(); // already implemented
     if (url == null) return null;
     return '$url/api';
   }
 
-  static Future<Map<String, dynamic>> reverseTransaction({
+  static Future<Map<String, dynamic>> reverseTopUp({
     required String originalRefNumber,
     required StaffListModel user,
   }) async {
     try {
-      // Generate new reference number for the reversal
       final newRefNumber = await RefGenerator.generate();
       final deviceId = await getSavedOrFetchDeviceId();
-      final base = await baseUrl; // 👈 fetch from SharedPreferences
+      final base = await baseUrl;
+
       if (base == null) {
         return {'success': false, 'error': 'Base URL not set in preferences'};
       }
 
-      final url = '$base/ReverseTransaction/$originalRefNumber/${user.staffId}/$deviceId/$newRefNumber';
+      final url = '$base/ReverseTopupTransaction/$originalRefNumber/${user.staffId}/$deviceId/$newRefNumber';
 
-      print('🔄 Reversing transaction...');
+      print('🔄 Reversing top-up...');
       print('📄 Original Ref: $originalRefNumber');
       print('🆕 New Ref: $newRefNumber');
       print('👤 Staff ID: ${user.staffId}');
@@ -38,24 +37,18 @@ class ReverseSaleService {
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          // Add authorization headers if needed
-          // 'Authorization': 'Bearer $token',
-        },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       );
 
-      print('📡 API Response Status: ${response.statusCode}');
-      print('📡 API Response Body: ${response.body}');
+      print('📡 API Status: ${response.statusCode}');
+      print('📡 API Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
-        // Check if the reversal was successful
         final error = responseData['error'];
         if (error != null && error['ErrorCode'] == 0) {
-          print('✅ Transaction reversed successfully');
+          print('✅ Reverse top-up successful');
           return {
             'success': true,
             'data': responseData,
@@ -63,23 +56,19 @@ class ReverseSaleService {
             'originalRefNumber': originalRefNumber,
           };
         } else {
-          final errorMsg = error?['ErrorMsg'] ?? 'Unknown error occurred';
-          print('❌ Reversal failed: $errorMsg');
+          final errorMsg = error?['ErrorMsg'] ?? 'Failed! Check if the receipt Id is correct';
+          print('❌ Reverse top-up failed: $errorMsg');
           return {'success': false, 'error': errorMsg};
         }
-      } else if (response.statusCode == 404) {
-        print('❌ Transaction not found');
-        return {'success': false, 'error': 'Transaction not found. Please check the reference number.'};
       } else {
-        print('❌ Failed to reverse transaction: ${response.statusCode}');
         return {
           'success': false,
-          'error': 'Failed to reverse transaction: ${response.statusCode}',
+          'error': 'Failed: ${response.statusCode}',
           'details': response.body,
         };
       }
     } catch (e) {
-      print('❌ Error reversing transaction: $e');
+      print('❌ Network error: $e');
       return {'success': false, 'error': 'Network error: $e'};
     }
   }

@@ -6,14 +6,17 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'package:sahara_app/models/customer_account_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/modules/initialize_card_service.dart';
 import 'package:sahara_app/modules/nfc_functions.dart';
 import 'package:sahara_app/modules/reprint_service.dart';
 import 'package:sahara_app/modules/reverse_sale_service.dart';
+import 'package:sahara_app/modules/reverse_top_up_service.dart';
 import 'package:sahara_app/pages/card_details_page.dart';
 import 'package:sahara_app/pages/reprint_receipt_page.dart';
+import 'package:sahara_app/pages/reverse_top_up_page.dart';
 import 'package:sahara_app/pages/tap_card_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -356,7 +359,6 @@ class _SettingsPageState extends State<SettingsPage> {
   //REPRINT RECEIPT
   Future<void> showReceiptReprintDialog(BuildContext context) async {
     final controller = TextEditingController();
-    // ignore: unused_local_variable
     String? errorMessage;
     bool isLoading = false;
 
@@ -365,7 +367,6 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            // print(errorMessage);
             return AlertDialog(
               title: const Text('Receipt Reprint'),
               content: Column(
@@ -379,23 +380,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     obscureText: false,
                     maxLength: 20,
                   ),
-                  // TextField(
-                  //   controller: controller,
-                  //   cursorColor: ColorsUniversal.buttonsColor,
-                  //   decoration: InputDecoration(
-                  //     labelText: 'Enter Receipt Id (e.g., TR5250815153110)',
-                  //     labelStyle: TextStyle(color: Colors.brown[300]),
-                  //     focusedBorder: UnderlineInputBorder(
-                  //       borderSide: BorderSide(color: ColorsUniversal.buttonsColor)
-                  //     ),
-                  //     errorText: errorMessage,
-                  //   ),
-                  // ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 14)),
+                  ],
                   if (isLoading) ...[
-                    SizedBox(height: 16),
-                    CircularProgressIndicator(),
-                    SizedBox(height: 8),
-                    Text('Fetching receipt...'),
+                    const SizedBox(height: 16),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 8),
+                    const Text('Fetching receipt...'),
                   ],
                 ],
               ),
@@ -435,9 +428,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             });
 
                             if (result['success']) {
-                              Navigator.of(context).pop(); // Close dialog
-
-                              // Navigate to simple reprint page
+                              Navigator.of(context).pop(); // ✅ Close dialog
+                              final deviceId = await getSavedOrFetchDeviceId();
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -445,18 +437,19 @@ class _SettingsPageState extends State<SettingsPage> {
                                     user: widget.user,
                                     apiData: result['data'],
                                     refNumber: receiptNumber,
+                                    terminalName: deviceId,
                                   ),
                                 ),
                               );
                             } else {
                               setState(() {
-                                errorMessage = result['error'];
+                                errorMessage = result['error'] ?? 'Failed to fetch receipt';
                               });
                             }
                           } catch (e) {
                             setState(() {
                               isLoading = false;
-                              errorMessage = 'Error: $e';
+                              errorMessage = 'Unexpected error: $e';
                             });
                           }
                         },
@@ -472,84 +465,199 @@ class _SettingsPageState extends State<SettingsPage> {
 
   ///TOPUP TRANSACTION
   ///TOPUP TRANSACTION
-Future<void> showTopUpTransactionDialog(BuildContext context) async {
-  final controller = TextEditingController();
+  Future<void> showTopUpTransactionDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    String? errorMessage;
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Topup Account'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  myPinTextField(
+                    controller: controller,
+                    myLabelText: 'Enter TopUp Amount',
+                    myHintText: 'Amount (e.g., 1000)',
+                    keyboardType: TextInputType.number,
+                    obscureText: false,
+                    maxLength: 20,
+                  ),
+                  if (errorMessage != null) ...[
+                    SizedBox(height: 8),
+                    Text(errorMessage!, style: TextStyle(color: Colors.red, fontSize: 12)),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final amountText = controller.text.trim();
+
+                    if (amountText.isEmpty) {
+                      setState(() {
+                        errorMessage = 'Please enter an amount';
+                      });
+                      return;
+                    }
+
+                    final amount = double.tryParse(amountText);
+                    if (amount == null || amount <= 0) {
+                      setState(() {
+                        errorMessage = 'Please enter a valid amount';
+                      });
+                      return;
+                    }
+
+                    if (amount < 10) {
+                      setState(() {
+                        errorMessage = 'Minimum top-up amount is Ksh 10';
+                      });
+                      return;
+                    }
+
+                    // Amount is valid, navigate to card scanning
+                    Navigator.pop(context); // Close dialog
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TapCardPage(
+                          user: widget.user,
+                          action: TapCardAction.topUp,
+                          topUpAmount: amount, // PASS THE AMOUNT
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  //REVERSE TOPUP
+  Future<void> showReverseTopUpDialog(BuildContext context) async {
+  final reverseTopUpController = TextEditingController();
   String? errorMessage;
+  bool isLoading = false;
 
   return showDialog(
     context: context,
-    builder: (context) {
+    builder: (dialogContext) {
       return StatefulBuilder(
-        builder: (context, setState) {
+        builder: (buildContext, setState) {
           return AlertDialog(
-            title: const Text('Topup Account'),
+            title: const Text('Reverse Topup'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 myPinTextField(
-                  controller: controller,
-                  myLabelText: 'Enter TopUp Amount',
-                  myHintText: 'Amount (e.g., 1000)',
-                  keyboardType: TextInputType.number,
+                  controller: reverseTopUpController,
+                  myLabelText: 'Enter Receipt Id',
+                  myHintText: '(e.g., TR5250815153110)',
+                  keyboardType: TextInputType.text,
                   obscureText: false,
                   maxLength: 20,
                 ),
                 if (errorMessage != null) ...[
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     errorMessage!,
-                    style: TextStyle(color: Colors.red, fontSize: 12),
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                    textAlign: TextAlign.center,
                   ),
+                ],
+                if (isLoading) ...[
+                  const SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 8),
+                  const Text('Reversing top-up...'),
                 ],
               ],
             ),
             actions: [
               TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(),
                 child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
               ),
               TextButton(
-                onPressed: () {
-                  final amountText = controller.text.trim();
-                  
-                  if (amountText.isEmpty) {
-                    setState(() {
-                      errorMessage = 'Please enter an amount';
-                    });
-                    return;
-                  }
-                  
-                  final amount = double.tryParse(amountText);
-                  if (amount == null || amount <= 0) {
-                    setState(() {
-                      errorMessage = 'Please enter a valid amount';
-                    });
-                    return;
-                  }
-                  
-                  if (amount < 10) {
-                    setState(() {
-                      errorMessage = 'Minimum top-up amount is Ksh 10';
-                    });
-                    return;
-                  }
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        final refNumber = reverseTopUpController.text.trim();
 
-                  // Amount is valid, navigate to card scanning
-                  Navigator.pop(context); // Close dialog
-                  
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TapCardPage(
-                        user: widget.user, 
-                        action: TapCardAction.topUp,
-                        topUpAmount: amount, // PASS THE AMOUNT
-                      ),
-                    ),
-                  );
-                },
+                        if (refNumber.isEmpty) {
+                          setState(() {
+                            errorMessage = 'Please enter a receipt number';
+                          });
+                          return;
+                        }
+
+                        setState(() {
+                          isLoading = true;
+                          errorMessage = null;
+                        });
+
+                        try {
+                          final result = await ReverseTopUpService.reverseTopUp(
+                            originalRefNumber: refNumber,
+                            user: widget.user,
+                          );
+
+                          setState(() {
+                            isLoading = false;
+                          });
+
+                          if (result['success']) {
+                            final deviceId = await getSavedOrFetchDeviceId();
+
+                            // Extract data from response
+                            final responseData = result['data'];
+                            final customerAccount = responseData['customerAccount'] ?? {};
+                            final accountNo = customerAccount['customerAccountNumber']?.toString() ?? 'N/A';
+                            final amount = responseData['topUpAmount']?.abs() ?? 0.0;
+
+                            Navigator.of(dialogContext).pop(); // Close dialog first
+                            Navigator.of(context).push( // Then navigate using original context
+                              MaterialPageRoute(
+                                builder: (_) => ReverseTopUpPage(
+                                  user: widget.user,
+                                  accountNo: accountNo,
+                                  staff: widget.user,
+                                  topUpData: responseData,
+                                  refNumber: result['newRefNumber'],
+                                  termNumber: deviceId,
+                                  amount: amount,
+                                ),
+                              ),
+                            );
+                          } else {
+                            setState(() {
+                              errorMessage = result['error'] ?? 'Failed to reverse top-up';
+                            });
+                          }
+                        } catch (e) {
+                          setState(() {
+                            isLoading = false;
+                            errorMessage = 'Unexpected error: $e';
+                          });
+                        }
+                      },
                 child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
               ),
             ],
@@ -647,7 +755,7 @@ Future<void> showTopUpTransactionDialog(BuildContext context) async {
         );
       },
       'Top Up': () => showTopUpTransactionDialog(context),
-      'Reverse Top Up': () {},
+      'Reverse Top Up': () => showReverseTopUpDialog(context),
       'Re-Print Sale': () => showReceiptReprintDialog(context),
       'Reverse Sale': () => showReverseSaleDialog(context),
     };

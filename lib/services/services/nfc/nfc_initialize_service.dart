@@ -3,13 +3,13 @@ import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'dart:async';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../models/staff_list_model.dart';
-import '../../helpers/uid_converter.dart';
-import '../../helpers/device_id_helper.dart';
-import '../../modules/initialize_card_service.dart';
-import '../../modules/complete_card_init_service.dart';
-import '../../modules/nfc_functions.dart';
+import '../../../models/nfc_result.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../helpers/uid_converter.dart';
+import '../../../helpers/device_id_helper.dart';
+import '../../../modules/initialize_card_service.dart';
+import '../../../modules/complete_card_init_service.dart';
+import '../../../modules/nfc_functions.dart';
 
 class NFCInitializeService extends NFCBaseService {
   static Future<NFCResult> initializeCard(BuildContext context, StaffListModel user) async {

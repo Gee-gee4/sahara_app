@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'dart:async';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../models/staff_list_model.dart';
-import '../../modules/nfc_functions.dart';
-import '../../modules/customer_account_details_service.dart';
-import '../../helpers/device_id_helper.dart';
-import '../../pages/card_details_page.dart';
+import '../../../models/nfc_result.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../modules/nfc_functions.dart';
+import '../../../modules/customer_account_details_service.dart';
+import '../../../helpers/device_id_helper.dart';
+import '../../../pages/card_details_page.dart';
 
 class NFCDetailsService extends NFCBaseService {
   static Future<NFCResult> handleCardDetails(BuildContext context, StaffListModel user) async {

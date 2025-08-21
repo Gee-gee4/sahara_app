@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'dart:async';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../models/staff_list_model.dart';
-import '../../helpers/uid_converter.dart';
-import '../../modules/initialize_card_service.dart';
-import '../../modules/nfc_functions.dart';
+import '../../../models/nfc_result.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../helpers/uid_converter.dart';
+import '../../../modules/initialize_card_service.dart';
+import '../../../modules/nfc_functions.dart';
 
 class NFCFormatService extends NFCBaseService {
   static Future<NFCResult> formatCard(BuildContext context, StaffListModel user) async {

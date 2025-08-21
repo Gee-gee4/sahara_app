@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'dart:async';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../models/staff_list_model.dart';
-import '../../modules/nfc_functions.dart';
-import '../../modules/top_up_service.dart';
-import '../../helpers/device_id_helper.dart';
-import '../../pages/top_up_page.dart';
-import '../../utils/colors_universal.dart';
+import '../../../models/nfc_result.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../modules/nfc_functions.dart';
+import '../../../modules/top_up_service.dart';
+import '../../../helpers/device_id_helper.dart';
+import '../../../pages/top_up_page.dart';
+import '../../../utils/colors_universal.dart';
 
 class NFCTopUpService extends NFCBaseService {
   static Future<NFCResult> handleTopUp(

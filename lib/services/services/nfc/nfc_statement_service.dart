@@ -3,13 +3,13 @@ import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../models/staff_list_model.dart';
-import '../../modules/nfc_functions.dart';
-import '../../modules/ministatement_service.dart';
-import '../../helpers/device_id_helper.dart';
-import '../../helpers/ref_generator.dart';
-import '../../pages/mini_statement_page.dart';
+import '../../../models/nfc_result.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../modules/nfc_functions.dart';
+import '../../../modules/ministatement_service.dart';
+import '../../../helpers/device_id_helper.dart';
+import '../../../helpers/ref_generator.dart';
+import '../../../pages/mini_statement_page.dart';
 
 class NFCStatementService extends NFCBaseService {
   static Future<NFCResult> handleMiniStatement(BuildContext context, StaffListModel user) async {

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'dart:async';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../helpers/uid_converter.dart';
-import '../../utils/colors_universal.dart';
+import '../../../models/nfc_result.dart';
+import '../../../helpers/uid_converter.dart';
+import '../../../utils/colors_universal.dart';
 
 class NFCUIDService extends NFCBaseService {
   static Future<NFCResult> viewUID(BuildContext context) async {

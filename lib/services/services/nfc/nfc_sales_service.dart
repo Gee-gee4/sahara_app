@@ -4,19 +4,19 @@ import 'dart:async';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'nfc_base_service.dart';
-import '../../models/nfc_result.dart';
-import '../../models/staff_list_model.dart';
-import '../../models/customer_account_details_model.dart';
-import '../../models/payment_mode_model.dart';
-import '../../models/product_card_details_model.dart';
-import '../../modules/nfc_functions.dart';
-import '../../modules/customer_account_details_service.dart';
-import '../../helpers/uid_converter.dart';
-import '../../helpers/device_id_helper.dart';
-import '../../helpers/ref_generator.dart';
-import '../../helpers/cart_storage.dart';
-import '../../pages/receipt_print.dart';
-import '../../utils/colors_universal.dart';
+import '../../../models/nfc_result.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../models/customer_account_details_model.dart';
+import '../../../models/payment_mode_model.dart';
+import '../../../models/product_card_details_model.dart';
+import '../../../modules/nfc_functions.dart';
+import '../../../modules/customer_account_details_service.dart';
+import '../../../helpers/uid_converter.dart';
+import '../../../helpers/device_id_helper.dart';
+import '../../../helpers/ref_generator.dart';
+import '../../../helpers/cart_storage.dart';
+import '../../../pages/receipt_print.dart';
+import '../../../utils/colors_universal.dart';
 
 class NFCSalesService extends NFCBaseService {
   // CASH AND CARD SALE

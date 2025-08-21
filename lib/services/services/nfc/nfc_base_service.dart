@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import '../../utils/colors_universal.dart';
-import '../../utils/color_hex.dart';
+import '../../../utils/colors_universal.dart';
+import '../../../utils/color_hex.dart';
 
 abstract class NFCBaseService {
   // Common loading spinner

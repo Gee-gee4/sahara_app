@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sahara_app/services/nfc/nfc_details_service.dart';
-import 'package:sahara_app/services/nfc/nfc_pin_service.dart';
-import 'package:sahara_app/services/nfc/nfc_sales_service.dart';
-import 'package:sahara_app/services/nfc/nfc_statement_service.dart';
-import 'package:sahara_app/services/nfc/nfc_topup_service.dart';
-import 'package:sahara_app/services/nfc/nfc_uid_service.dart';
-import '../../models/staff_list_model.dart';
-import '../../models/nfc_result.dart';
+import 'package:sahara_app/services/services/nfc/nfc_details_service.dart';
+import 'package:sahara_app/services/services/nfc/nfc_pin_service.dart';
+import 'package:sahara_app/services/services/nfc/nfc_sales_service.dart';
+import 'package:sahara_app/services/services/nfc/nfc_statement_service.dart';
+import 'package:sahara_app/services/services/nfc/nfc_topup_service.dart';
+import 'package:sahara_app/services/services/nfc/nfc_uid_service.dart';
+import '../../../models/staff_list_model.dart';
+import '../../../models/nfc_result.dart';
 import 'nfc_format_service.dart';
 import 'nfc_initialize_service.dart';
 

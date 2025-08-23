@@ -37,7 +37,7 @@ class AuthModule {
 
   // login (your existing method)
   Future<LoginResponse> login({
-    String email = 'gladysmbuthia324@gmail.com',
+    String email = 'elyudde@gmail.com',
     String password = 'pass1234',
   }) async {
     try {

@@ -10,12 +10,12 @@ class AutoModeSettings extends StatefulWidget {
   final TextEditingController fetchingTimeController;
   
   const AutoModeSettings({
-    Key? key, 
+    super.key, 
     required this.borderColor,
     required this.urlController,
     required this.stationNameController,
     required this.fetchingTimeController,
-  }) : super(key: key);
+  });
 
   @override
   State<AutoModeSettings> createState() => _AutoModeSettingsState();

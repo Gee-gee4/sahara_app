@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/models/transaction_result.dart';
 import 'package:sahara_app/modules/reverse_sale_service.dart' as OriginalReverseSaleService;
+import 'package:sahara_app/pages/reverse_sale_page.dart';
+import 'package:sahara_app/helpers/device_id_helper.dart';
 import 'transaction_base_service.dart';
 
 class ReverseSaleTransactionService extends TransactionBaseService {
@@ -47,22 +49,44 @@ class ReverseSaleTransactionService extends TransactionBaseService {
       );
 
       if (result['success']) {
-        await TransactionBaseService.showSuccessDialog(
+        // Get device ID for the receipt
+        final deviceId = await getSavedOrFetchDeviceId();
+        
+        // Navigate to the ReverseSalePage instead of showing a dialog
+        Navigator.push(
           context,
-          'Reversal Successful',
-          'Transaction has been reversed successfully.',
-          details: {
-            'Original Receipt:': result['originalRefNumber'],
-            'Reversal Receipt:': result['newRefNumber'],
-            'Status:': 'Reversed',
-          },
+          MaterialPageRoute(
+            builder: (_) => ReverseSalePage(
+              user: user,
+              apiData: result['data'],
+              originalRefNumber: result['originalRefNumber'],
+              reversalRefNumber: result['newRefNumber'],
+              terminalName: deviceId,
+            ),
+          ),
         );
         
         return TransactionResult.success('Transaction reversed successfully', data: result);
       } else {
+        // Show error in a snackbar instead of dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reversal failed: ${result['error']}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
         return TransactionResult.error(result['error']);
       }
     } catch (e) {
+      // Show error in a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
       return TransactionResult.error('Error: $e');
     }
   }

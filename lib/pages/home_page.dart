@@ -6,9 +6,11 @@ import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
+import 'package:sahara_app/pages/basic_pos_settings_page.dart';
 import 'package:sahara_app/pages/cart_page.dart';
 import 'package:sahara_app/pages/cloud_settings.dart';
 import 'package:sahara_app/pages/fuel_page.dart';
+import 'package:sahara_app/pages/operation_mode_settings_page.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/pages/product_list_page.dart';
 import 'package:sahara_app/pages/products_page.dart';
@@ -16,7 +18,6 @@ import 'package:sahara_app/pages/settings_page.dart';
 import 'package:sahara_app/pages/sync_items_page.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
-import 'package:sahara_app/widgets/reusable_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
@@ -28,14 +29,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
- Future<OperationMode> _getSavedMode() async {
-  final prefs = await SharedPreferences.getInstance();
-  final mode = prefs.getString('operationMode') ?? 'manual'; // fixed key
-  print("Loaded mode: $mode");
-  return mode == 'auto' ? OperationMode.auto : OperationMode.manual;
-}
-
+  Future<OperationMode> _getSavedMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('operationMode') ?? 'manual'; // fixed key
+    print("Loaded mode: $mode");
+    return mode == 'auto' ? OperationMode.auto : OperationMode.manual;
+  }
 
   Widget _buildHomeScreen() {
     return Padding(
@@ -45,13 +44,8 @@ class _HomePageState extends State<HomePage> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hint: Text(
-                'Search Product Categories',
-                style: TextStyle(color: Colors.grey[400]),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
+              hint: Text('Search Product Categories', style: TextStyle(color: Colors.grey[400])),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
               prefixIcon: Icon(Icons.search),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(25),
@@ -68,10 +62,7 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             child: GridView.builder(
               itemCount: _filteredCategories.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: .9,
-              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .9),
               itemBuilder: (context, index) {
                 final category = _filteredCategories[index];
                 return Padding(
@@ -85,7 +76,14 @@ class _HomePageState extends State<HomePage> {
                       onTap: () async {
                         final mode = await _getSavedMode();
 
-                        if (mode == OperationMode.manual) {
+                        // Check if it's automation mode AND the category is FUEL
+                        if (mode == OperationMode.auto && category.productCategoryName.toUpperCase() == 'FUEL') {
+                          // Only FUEL category gets automatic pump fetching in auto mode
+                          setState(() {
+                            _activeCategoryPage = FuelPage(user: widget.user);
+                          });
+                        } else {
+                          // All other categories (including non-fuel in auto mode) work manually
                           setState(() {
                             _activeCategoryPage = ProductListPage(
                               categoryName: category.productCategoryName,
@@ -96,10 +94,6 @@ class _HomePageState extends State<HomePage> {
                                 });
                               },
                             );
-                          });
-                        } else {
-                          setState(() {
-                              _activeCategoryPage = FuelPage();
                           });
                         }
                       },
@@ -118,19 +112,10 @@ class _HomePageState extends State<HomePage> {
                                 color: ColorsUniversal.fillWids,
                               ),
                               SizedBox(height: 12),
-                              Text(
-                                'Category Name:',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.black54,
-                                ),
-                              ),
+                              Text('Category Name:', style: TextStyle(fontSize: 15, color: Colors.black54)),
                               Text(
                                 category.productCategoryName,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
@@ -174,11 +159,7 @@ class _HomePageState extends State<HomePage> {
     final data = box.get('productItems') as List?;
 
     if (data != null) {
-      final loadedCategories = data
-          .map(
-            (e) => ProductCategoryModel.fromJson(Map<String, dynamic>.from(e)),
-          )
-          .toList();
+      final loadedCategories = data.map((e) => ProductCategoryModel.fromJson(Map<String, dynamic>.from(e))).toList();
 
       setState(() {
         _allcategories = loadedCategories;
@@ -206,9 +187,7 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
   List<Widget> get _screens => [
-    _activeCategoryPage != null
-        ? _activeCategoryPage!
-        : _buildHomeScreen(), // home layout
+    _activeCategoryPage != null ? _activeCategoryPage! : _buildHomeScreen(), // home layout
     ProductsPage(),
     SettingsPage(user: widget.user),
   ];
@@ -219,66 +198,31 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: ColorsUniversal.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text(
-          widget.user.staffName,
-          style: TextStyle(color: Colors.white70),
-        ),
+        title: Text(widget.user.staffName, style: TextStyle(color: Colors.white70)),
         centerTitle: true,
         backgroundColor: ColorsUniversal.appBarColor,
         iconTheme: IconThemeData(color: Colors.white70),
         actions: [
           // ADVANCED DROPDOWN
           PopupMenuButton<String>(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             color: ColorsUniversal.background,
-            icon: Icon(
-              Icons.build_circle_outlined,
-              color: Colors.white70,
-              size: 28,
-            ),
+            icon: Icon(Icons.build_circle_outlined, color: Colors.white70, size: 28),
             onSelected: (value) {
               if (value == 'sync') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SyncItemsPage(),
-                  ),
-                );
-              } else if (value == 'pos') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      backgroundColor: ColorsUniversal.background,
-                      appBar: myAppBar('POS Settings'),
-                      body: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: PosSettingsForm(showSyncButton: false),
-                      ),
-                    ),
-                  ),
-                );
-              } else if (value == 'automation') {
-                //  Navigator.push(
-                //   context,
-                //   MaterialPageRoute(builder: (context) => AutomationSettingsPage()),
-                // );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const SyncItemsPage()));
+              } else if (value == 'operation_mode') {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => OperationModeSettingsPage()));
+              } else if (value == 'receipt_settings') {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const BasicPosSettingsPage()));
               } else if (value == 'cloud') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CloudSettings()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => CloudSettings()));
               }
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'sync', child: Text('Sync Items')),
-              PopupMenuItem(value: 'pos', child: Text('POS Settings')),
-              PopupMenuItem(
-                value: 'automation',
-                child: Text('Automation Settings'),
-              ),
+              PopupMenuItem(value: 'operation_mode', child: Text('Operation Mode')),
+              PopupMenuItem(value: 'receipt_settings', child: Text('Receipt & Print Settings')),
               PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
             ],
           ),
@@ -296,28 +240,13 @@ class _HomePageState extends State<HomePage> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Colors.brown[800],
-                            fontSize: 17,
-                          ),
-                        ),
+                        child: Text('Cancel', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                       ),
                       TextButton(
-                        child: Text(
-                          'OK',
-                          style: TextStyle(
-                            color: Colors.brown[800],
-                            fontSize: 17,
-                          ),
-                        ),
+                        child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                         onPressed: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => UsersPage()),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => UsersPage()));
                         },
                       ),
                     ],
@@ -358,9 +287,7 @@ class _HomePageState extends State<HomePage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => CartPage(user: widget.user),
-            ),
+            MaterialPageRoute(builder: (context) => CartPage(user: widget.user)),
           ).then((_) => setState(() {})); // Refresh when coming back
         },
         backgroundColor: ColorsUniversal.buttonsColor,

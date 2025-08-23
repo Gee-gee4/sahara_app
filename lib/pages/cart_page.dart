@@ -388,7 +388,7 @@ class _CartPageState extends State<CartPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'My Cart ${currentMode == OperationMode.auto ? "(Auto Mode)" : "(Manual Mode)"}',
+          'My Cart ${currentMode == OperationMode.auto ? "" : ""}',
           style: TextStyle(color: Colors.white70),
         ),
         centerTitle: true,

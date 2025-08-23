@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:sahara_app/models/pump_model.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/modules/pumps_module.dart';
 import 'package:sahara_app/pages/transaction_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/pump_card.dart';
 
 class FuelPage extends StatefulWidget {
-  const FuelPage({super.key});
+  const FuelPage({super.key, required this.user});
+  final StaffListModel user;
 
   @override
   State<FuelPage> createState() => _FuelPageState();
@@ -48,7 +50,7 @@ class _FuelPageState extends State<FuelPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const TransactionPage(pumpId: 'all'),
+                builder: (context) =>TransactionPage(pumpId: 'all',user: widget.user,),
               ),
             ),
             child: Container(
@@ -68,7 +70,7 @@ class _FuelPageState extends State<FuelPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              const TransactionPage(pumpId: 'all'),
+                               TransactionPage(pumpId: 'all',user: widget.user,),
                         ),
                       );
                     },
@@ -121,7 +123,7 @@ class _FuelPageState extends State<FuelPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              TransactionPage(pumpId: pumpCurrent.pumpId),
+                              TransactionPage(pumpId: pumpCurrent.pumpId,user: widget.user,),
                         ),
                       );
                     },
@@ -130,7 +132,7 @@ class _FuelPageState extends State<FuelPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              TransactionPage(pumpId: pumpCurrent.pumpId),
+                              TransactionPage(pumpId: pumpCurrent.pumpId,user: widget.user,),
                         ),
                       );
                     },

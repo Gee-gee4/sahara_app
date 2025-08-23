@@ -9,6 +9,8 @@ import 'package:sahara_app/models/product_model.dart';
 import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sahara_app/pages/pos_settings_form.dart'; // Import for OperationMode
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -21,6 +23,7 @@ enum PrdtAmtQty { amount, quantity }
 
 class _ProductsPageState extends State<ProductsPage> {
   List<ProductModel> _allProducts = [];
+  OperationMode _currentMode = OperationMode.manual;
 
   final TextEditingController _searchController = TextEditingController();
   List<ProductModel> _filteredProducts = [];
@@ -28,7 +31,18 @@ class _ProductsPageState extends State<ProductsPage> {
   @override
   void initState() {
     super.initState();
-    _loadAllProducts();
+    _loadCurrentMode().then((_) {
+      _loadAllProducts();
+    });
+  }
+
+  Future<void> _loadCurrentMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modeString = prefs.getString('operationMode') ?? 'manual';
+    setState(() {
+      _currentMode = modeString == 'auto' ? OperationMode.auto : OperationMode.manual;
+    });
+    print("ProductsPage loaded mode: $_currentMode");
   }
 
   void _loadAllProducts() {
@@ -40,6 +54,13 @@ class _ProductsPageState extends State<ProductsPage> {
 
       final all = <ProductModel>[];
       for (var category in categories) {
+        // Filter out fuel products if in auto mode
+        if (_currentMode == OperationMode.auto && 
+            category.productCategoryName.toLowerCase().contains('fuel')) {
+          // Skip fuel category products in auto mode
+          print("Skipping fuel category '${category.productCategoryName}' in auto mode");
+          continue;
+        }
         all.addAll(category.products);
       }
 
@@ -47,6 +68,8 @@ class _ProductsPageState extends State<ProductsPage> {
         _allProducts = all;
         _filteredProducts = all;
       });
+      
+      print("Loaded ${all.length} products (mode: $_currentMode)");
     }
   }
 
@@ -70,11 +93,6 @@ class _ProductsPageState extends State<ProductsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsUniversal.background,
-      // appBar: AppBar(
-      //   title: const Text('All Products'),
-      //   backgroundColor: ColorsUniversal.appBarColor,
-      //   foregroundColor: Colors.white,
-      // ),
       body: _allProducts.isEmpty
           ? Center(
               child: SpinKitCircle(
@@ -93,6 +111,26 @@ class _ProductsPageState extends State<ProductsPage> {
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 children: [
+                  // Show mode indicator for debugging (you can remove this later)
+                  // if (_currentMode == OperationMode.auto)
+                  //   Container(
+                  //     margin: EdgeInsets.only(bottom: 8),
+                  //     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  //     decoration: BoxDecoration(
+                  //       color: ColorsUniversal.buttonsColor.withOpacity(0.1),
+                  //       borderRadius: BorderRadius.circular(20),
+                  //       border: Border.all(color: ColorsUniversal.buttonsColor.withOpacity(0.3)),
+                  //     ),
+                  //     child: Text(
+                  //       'Auto Mode - Fuel products handled separately',
+                  //       style: TextStyle(
+                  //         color: ColorsUniversal.buttonsColor,
+                  //         fontSize: 12,
+                  //         fontWeight: FontWeight.w500,
+                  //       ),
+                  //     ),
+                  //   ),
+                  
                   TextField(
                     controller: _searchController,
                     onChanged: _filterProducts,
@@ -153,7 +191,6 @@ class _ProductsPageState extends State<ProductsPage> {
                                       context: context,
                                       builder: (context) {
                                         final controller = TextEditingController();
-                                        // ignore: no_leading_underscores_for_local_identifiers
                                         PrdtAmtQty _sellMode = PrdtAmtQty.amount;
                                         return StatefulBuilder(
                                           builder: (context, setState) {
@@ -207,7 +244,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                                       focusedBorder: UnderlineInputBorder(
                                                         borderSide: BorderSide(
                                                           color: ColorsUniversal.buttonsColor,
-                                                        ), // Focus border color
+                                                        ),
                                                       ),
                                                     ),
                                                     cursorColor: ColorsUniversal.buttonsColor,
@@ -223,9 +260,6 @@ class _ProductsPageState extends State<ProductsPage> {
                                                     style: TextStyle(color: ColorsUniversal.buttonsColor),
                                                   ),
                                                 ),
-
-                                                // Updated ProductListPage - fix the addToCart call
-                                                // Replace your addToCart call with this:
                                                 ElevatedButton(
                                                   style: ElevatedButton.styleFrom(
                                                     backgroundColor: ColorsUniversal.buttonsColor,
@@ -240,12 +274,11 @@ class _ProductsPageState extends State<ProductsPage> {
                                                         ? input / pricePerUnit
                                                         : input;
 
-                                                    // FIXED: Include productId and correct parameter order
                                                     CartStorage().addToCart(
-                                                      variation.productVariationId, // productId (int)
-                                                      product.productName, // name (String)
-                                                      pricePerUnit, // unitPrice (double)
-                                                      quantity, // quantity (double)
+                                                      variation.productVariationId,
+                                                      product.productName,
+                                                      pricePerUnit,
+                                                      quantity,
                                                     );
 
                                                     Navigator.pop(context);
@@ -254,7 +287,6 @@ class _ProductsPageState extends State<ProductsPage> {
                                                         content: Text('${product.productName} added to cart'),
                                                         duration: Duration(milliseconds: 700),
                                                         backgroundColor: hexToColor('8f9c68'),
-                                                        // behavior: SnackBarBehavior.floating,
                                                       ),
                                                     );
                                                   },

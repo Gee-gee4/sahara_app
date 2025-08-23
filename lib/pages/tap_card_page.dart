@@ -18,7 +18,7 @@ class TapCardPage extends StatefulWidget {
     this.selectedPaymentMode,
     this.topUpAmount,
   });
-  
+
   final StaffListModel user;
   final TapCardAction action;
   final Map<String, String>? extraData;
@@ -39,7 +39,7 @@ class _TapCardPageState extends State<TapCardPage> {
   void initState() {
     super.initState();
     result = NFCServiceFactory.getActionTitle(widget.action);
-    
+
     // Auto-execute the action when page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _executeAction();
@@ -48,9 +48,9 @@ class _TapCardPageState extends State<TapCardPage> {
 
   Future<void> _executeAction() async {
     if (isProcessing || !mounted || _isCancelled) return;
-    
+
     setState(() => isProcessing = true);
-    
+
     try {
       // Prepare extra data for the service
       final extraData = <String, dynamic>{
@@ -64,13 +64,8 @@ class _TapCardPageState extends State<TapCardPage> {
       print('🚀 Executing ${widget.action.name} with factory...');
 
       // Execute the action through the factory
-      final result = await NFCServiceFactory.executeAction(
-        widget.action,
-        context,
-        widget.user,
-        extraData: extraData,
-      );
-      
+      final result = await NFCServiceFactory.executeAction(widget.action, context, widget.user, extraData: extraData);
+
       if (result.success) {
         print('✅ ${widget.action.name} completed: ${result.message}');
         // Most services handle their own navigation, so we don't need to do anything here
@@ -78,10 +73,9 @@ class _TapCardPageState extends State<TapCardPage> {
         print('❌ ${widget.action.name} failed: ${result.error}');
         // Error handling is done within the services
       }
-      
     } catch (e) {
       print('💥 Unexpected error in ${widget.action.name}: $e');
-      
+
       // Show a generic error if something unexpected happens
       if (mounted && !_isCancelled) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -107,19 +101,80 @@ class _TapCardPageState extends State<TapCardPage> {
     }
   }
 
+  // Show confirmation dialog before exiting
+  Future<bool> _showExitConfirmationDialog() async {
+    if (!mounted) return true;
+
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false, // User must choose an option
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: ColorsUniversal.background,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: ColorsUniversal.buttonsColor, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Exit?',
+                    style: TextStyle(color: ColorsUniversal.buttonsColor, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'If you exit now, you will lose all progress.',
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false); // Don't exit
+                  },
+                  child: Text(
+                    'Continue',
+                    style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop(true); // Exit confirmed
+
+                    // Cancel operation and clean up
+                    cancelOperation();
+                    try {
+                      await FlutterNfcKit.finish(); // Stop NFC
+                    } catch (e) {
+                      print('Error stopping NFC: $e');
+                      // NFC might not be active, ignore error
+                    }
+                  },
+                  child: Text(
+                    'Exit',
+                    style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Return false if dialog is dismissed
+  }
+
   // Handle back button press
   Future<bool> handleBackPress() async {
     if (isProcessing) {
-      // Cancel any ongoing operation
-      cancelOperation();
-      try {
-        await FlutterNfcKit.finish(); // Stop NFC
-      } catch (e) {
-        // NFC might not be active
-      }
-      return true; // Allow pop
+      // Show confirmation dialog
+      final shouldExit = await _showExitConfirmationDialog();
+      return shouldExit;
     }
-    return true; // Allow normal pop
+    return true; // Allow normal pop if not processing
   }
 
   @override
@@ -132,16 +187,31 @@ class _TapCardPageState extends State<TapCardPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true,
+      canPop: false, // Prevent automatic pop - we'll handle it manually
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop && isProcessing) {
-          // If the pop already happened and we were processing, clean up
-          await handleBackPress();
+        if (!didPop) {
+          // Handle back button press manually
+          final shouldPop = await handleBackPress();
+          if (shouldPop && mounted) {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: Scaffold(
         backgroundColor: ColorsUniversal.background,
-        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: ColorsUniversal.buttonsColor),
+            onPressed: () async {
+              final shouldPop = await handleBackPress();
+              if (shouldPop && mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -149,67 +219,15 @@ class _TapCardPageState extends State<TapCardPage> {
               children: [
                 Text(
                   'Hold the Card/Tag at the \nreader and keep it there',
-                  style: TextStyle(
-                    fontSize: 25, 
-                    fontWeight: FontWeight.w600, 
-                    color: Colors.black54
-                  ),
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600, color: Colors.black54),
                 ),
                 RotatedBox(
                   quarterTurns: -2,
-                  child: Image.asset(
-                    'assets/images/nfc_scan.png', 
-                    fit: BoxFit.fitHeight, 
-                    height: 300
-                  ),
+                  child: Image.asset('assets/images/nfc_scan.png', fit: BoxFit.fitHeight, height: 300),
                 ),
                 Expanded(
                   child: Column(
                     children: [
-                      Expanded(
-                        // Show current action status
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  result,
-                                  style: const TextStyle(
-                                    fontStyle: FontStyle.italic, 
-                                    fontSize: 16, 
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                if (isProcessing) ...[
-                                  SizedBox(height: 20),
-                                  SizedBox(
-                                    width: 30,
-                                    height: 30,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        ColorsUniversal.buttonsColor
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'Processing...',
-                                    style: TextStyle(
-                                      color: ColorsUniversal.buttonsColor,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12, left: 8, right: 8),
                         child: SizedBox(
@@ -219,20 +237,18 @@ class _TapCardPageState extends State<TapCardPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: ColorsUniversal.buttonsColor,
                               elevation: 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                             ),
-                            onPressed: (isProcessing || _isCancelled) ? null : () {
-                              _executeAction();
-                            },
+                            onPressed: (isProcessing || _isCancelled)
+                                ? null
+                                : () {
+                                    _executeAction();
+                                  },
                             child: Text(
                               isProcessing ? 'PROCESSING...' : 'TAP AGAIN !',
                               style: TextStyle(
-                                fontSize: 25, 
-                                color: (isProcessing || _isCancelled) 
-                                  ? Colors.white38 
-                                  : Colors.white70
+                                fontSize: 19,
+                                color: (isProcessing || _isCancelled) ? Colors.white38 : Colors.white70,
                               ),
                             ),
                           ),

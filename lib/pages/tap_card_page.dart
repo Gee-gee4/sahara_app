@@ -78,10 +78,11 @@ class _TapCardPageState extends State<TapCardPage> {
 
       // Show a generic error if something unexpected happens
       if (mounted && !_isCancelled) {
+        print(e.toString());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('An unexpected error occurred: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            content: Text('Failed! Check if the device supports NFC'),
+            backgroundColor: Colors.grey,
             duration: Duration(seconds: 3),
           ),
         );

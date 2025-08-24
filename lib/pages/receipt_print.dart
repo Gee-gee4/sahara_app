@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/helpers/printer_service_telpo.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
@@ -31,8 +32,8 @@ class ReceiptPrint extends StatefulWidget {
   final String termNumber;
   final String? cardUID;
   final int? customerAccountNo;
-   final int? paymentModeId; 
-  final String? paymentModeName; 
+  final int? paymentModeId;
+  final String? paymentModeName;
 
   const ReceiptPrint({
     super.key,
@@ -54,7 +55,7 @@ class ReceiptPrint extends StatefulWidget {
     required this.termNumber,
     this.cardUID,
     this.customerAccountNo,
-     this.paymentModeId,        
+    this.paymentModeId,
     this.paymentModeName,
   });
 
@@ -75,74 +76,70 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
   }
 
   Future<void> _completeSale() async {
-  print('📤 Completing sale transaction...');
-  
-  final bool isCardSale = widget.showCardDetails && widget.clientTotal != null && widget.discount != null;
-  
-  try {
-    final apiResult = await SaleService.completeSale(
-      refNumber: widget.refNumber,
-      cartItems: widget.cartItems,
-      user: widget.user,
-      isCardSale: isCardSale,
-      // Card sale data - ALWAYS pass card data if available (for both card sales AND cash+card sales)
-      customerName: widget.customerName.isNotEmpty ? widget.customerName : null,
-      customerUID: widget.cardUID, // Pass card UID if available (for cash+card tracking)
-      customerAccountNo: widget.customerAccountNo, // Pass account number if available (for cash+card tracking)
-      customerAccountBalance: widget.customerBalance,
-      accountProducts: isCardSale ? widget.accountProducts : null, // Only for card sales (client pricing)
-      // Cash sale data
-      cashGiven: !isCardSale ? widget.cashGiven : null,
-      change: !isCardSale ? (widget.cashGiven - getStationTotal()) : null,
-      // Payment mode data
-      paymentModeId: widget.paymentModeId,
-      paymentModeName: widget.paymentModeName,
-    );
+    print('📤 Completing sale transaction...');
 
-    setState(() {
-      _apiCallInProgress = false;
-      if (apiResult['success']) {
-        _saleCompleted = true;
-        print('✅ Sale transaction completed successfully');
-      } else {
-        _apiError = apiResult['error'];
-        // ignore: unnecessary_brace_in_string_interps
-        print('❌ Sale transaction failed: ${_apiError}');
-      }
-    });
+    final bool isCardSale = widget.showCardDetails && widget.clientTotal != null && widget.discount != null;
 
-    // Show feedback to user
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _saleCompleted 
-              ? 'Sale completed successfully!' 
-              : 'Sale failed: $_apiError'
+    try {
+      final apiResult = await SaleService.completeSale(
+        refNumber: widget.refNumber,
+        cartItems: widget.cartItems,
+        user: widget.user,
+        isCardSale: isCardSale,
+        // Card sale data - ALWAYS pass card data if available (for both card sales AND cash+card sales)
+        customerName: widget.customerName.isNotEmpty ? widget.customerName : null,
+        customerUID: widget.cardUID, // Pass card UID if available (for cash+card tracking)
+        customerAccountNo: widget.customerAccountNo, // Pass account number if available (for cash+card tracking)
+        customerAccountBalance: widget.customerBalance,
+        accountProducts: isCardSale ? widget.accountProducts : null, // Only for card sales (client pricing)
+        // Cash sale data
+        cashGiven: !isCardSale ? widget.cashGiven : null,
+        change: !isCardSale ? (widget.cashGiven - getStationTotal()) : null,
+        // Payment mode data
+        paymentModeId: widget.paymentModeId,
+        paymentModeName: widget.paymentModeName,
+      );
+
+      setState(() {
+        _apiCallInProgress = false;
+        if (apiResult['success']) {
+          _saleCompleted = true;
+          print('✅ Sale transaction completed successfully');
+        } else {
+          _apiError = apiResult['error'];
+          // ignore: unnecessary_brace_in_string_interps
+          print('❌ Sale transaction failed: ${_apiError}');
+        }
+      });
+
+      // Show feedback to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_saleCompleted ? 'Sale completed successfully!' : 'Sale failed: $_apiError'),
+            backgroundColor: _saleCompleted ? hexToColor('8f9c68') : Colors.grey,
+            duration: Duration(seconds: 3),
           ),
-          backgroundColor: _saleCompleted ? hexToColor('8f9c68') : Colors.grey,
-          duration: Duration(seconds: 3),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _apiCallInProgress = false;
+        _apiError = 'Network error: $e';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sale failed: Network error'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      print('❌ Error completing sale: $e');
     }
-  } catch (e) {
-    setState(() {
-      _apiCallInProgress = false;
-      _apiError = 'Network error: $e';
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Sale failed: Network error'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
-    }
-    print('❌ Error completing sale: $e');
   }
-}
 
   Future<void> _printReceipt() async {
     // Check if sale was completed successfully before printing
@@ -152,10 +149,28 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
       if (!shouldPrint) return; // User chose not to print
     }
 
+    // Check printer status before starting
+    final printerReady = await _checkPrinterStatus();
+    if (!printerReady) return; // Don't proceed if printer has issues
+
     final receiptCount = await SharedPrefsHelper.getReceiptCount();
 
     for (int i = 0; i < receiptCount; i++) {
       print('🖨️ Printing receipt ${i + 1} of $receiptCount');
+
+      // Check printer status before each print (especially important for multiple receipts)
+      if (i > 0) {
+        final statusOk = await _checkPrinterStatus();
+        if (!statusOk) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Printer issue detected before receipt ${i + 1}. Printing stopped."),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      }
 
       final result = await PrinterServiceTelpo().printReceiptForTransaction(
         user: widget.user,
@@ -175,7 +190,12 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
       );
 
       if (result != PrintResult.success) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Receipt ${i + 1} failed to print.")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Receipt ${i + 1} failed to print: ${_getPrintResultMessage(result)}"),
+            backgroundColor: Colors.grey,
+          ),
+        );
         return;
       }
 
@@ -201,7 +221,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('All receipts printed successfully!'),
-        backgroundColor: Colors.green,
+        backgroundColor: hexToColor('8f9c68'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -215,6 +235,128 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
       MaterialPageRoute(builder: (context) => HomePage(user: widget.user)),
       (route) => false,
     );
+  }
+
+  // New method to check printer status
+  Future<bool> _checkPrinterStatus() async {
+    try {
+      final TelpoFlutterChannel _printer = TelpoFlutterChannel();
+      final TelpoStatus status = await _printer.checkStatus();
+
+      print('🖨️ Printer status: ${status.toString()}');
+
+      switch (status) {
+        case TelpoStatus.ok: // Changed from TelpoStatus.values
+          print('✅ Printer ready');
+          return true;
+
+        case TelpoStatus.noPaper:
+          await _showPrinterErrorDialog(
+            'No Paper Found',
+            'Please load paper into the printer and try again.',
+            Icons.assignment,
+          );
+          await Future.delayed(Duration(milliseconds: 500));
+          return false;
+
+        case TelpoStatus.overHeat:
+          await _showPrinterErrorDialog(
+            'Printer Overheated',
+            'The printer is too hot. Please wait for it to cool down before printing.',
+            Icons.warning_amber,
+          );
+          return false;
+
+        case TelpoStatus.cacheIsFull:
+          await _showPrinterErrorDialog(
+            'Printer Buffer Full',
+            'The printer buffer is full. Please wait a moment and try again.',
+            Icons.memory,
+          );
+          return false;
+
+        case TelpoStatus.unknown:
+          await _showPrinterErrorDialog(
+            'Printer Error',
+            'Failed! Please check if the device supports printing services and try again.',
+            Icons.error_outline,
+          );
+          return false;
+      }
+    } catch (e) {
+      print('❌ Error checking printer status: $e');
+      await _showPrinterErrorDialog(
+        'Printer Check Failed',
+        'Unable to check printer status: ${e.toString()}',
+        Icons.help_outline,
+      );
+      return false;
+    }
+  }
+
+  // Helper method to show printer error dialogs
+  Future<void> _showPrinterErrorDialog(String title, String message, IconData icon) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: ColorsUniversal.background,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(icon, color: ColorsUniversal.buttonsColor, size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(color: ColorsUniversal.buttonsColor, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          content: Text(message, style: TextStyle(fontSize: 16, color: Colors.black87)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'OK',
+                style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Retry checking printer status
+                _printReceipt();
+              },
+              child: Text(
+                'Retry',
+                style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper method to get user-friendly print result messages
+  String _getPrintResultMessage(PrintResult result) {
+    switch (result) {
+      case PrintResult.success:
+        return 'Print successful';
+      case PrintResult.noPaper: // Changed from PrintResult.values
+        return 'No paper in printer';
+      case PrintResult.lowBattery:
+        return 'Printer battery low';
+      case PrintResult.overHeat:
+        return 'Printer overheated';
+      case PrintResult.dataCanNotBeTransmitted:
+        return 'Data transmission failed';
+      case PrintResult.other:
+        return 'Other printer error';
+    }
   }
 
   // Helper dialog to show when sale isn't completed
@@ -523,6 +665,19 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                   const Center(child: Text('CUSTOMER COPY')),
                   const SizedBox(height: 4),
                   const Center(child: Text('Powered by Sahara FCS', style: TextStyle(fontSize: 11))),
+                  SizedBox(height: 10),
+                  Center(
+                    child: SizedBox(
+                      width: 100,
+                      height: 100,
+                      child: PrettyQrView.data(
+                        data: 'https://www.tovutigroup.com/',
+                        decoration: const PrettyQrDecoration(
+                          // Customize as needed
+                        ),
+                      ),
+                    ),
+                  ),
 
                   // Test Print Button
                 ],

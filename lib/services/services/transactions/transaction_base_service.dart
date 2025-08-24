@@ -105,7 +105,7 @@ abstract class TransactionBaseService {
     String hintText, {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
-    int maxLength = 20,
+    int maxLength = 50,
     String? Function(String)? validator,
   }) async {
     final controller = TextEditingController();

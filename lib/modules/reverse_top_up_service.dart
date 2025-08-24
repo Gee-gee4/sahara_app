@@ -8,7 +8,7 @@ import 'package:sahara_app/models/staff_list_model.dart';
 
 class ReverseTopUpService {
   static Future<String?> get baseUrl async {
-    final url = await apiUrl(); // already implemented
+    final url = await apiUrl();
     if (url == null) return null;
     return '$url/api';
   }

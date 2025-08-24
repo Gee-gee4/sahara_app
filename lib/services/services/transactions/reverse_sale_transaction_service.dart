@@ -15,9 +15,8 @@ class ReverseSaleTransactionService extends TransactionBaseService {
       context,
       'Reverse Sale',
       'Enter Receipt Id',
-      '(e.g., TR5250815153110)',
+      '',
       keyboardType: TextInputType.text,
-      maxLength: 20,
       validator: (input) {
         if (input.isEmpty) return 'Please enter a receipt number';
         return null;
@@ -71,8 +70,8 @@ class ReverseSaleTransactionService extends TransactionBaseService {
         // Show error in a snackbar instead of dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Reversal failed: ${result['error']}'),
-            backgroundColor: Colors.red,
+            content: Text('Failed! ${result['error']}'),
+            backgroundColor: Colors.grey,
             duration: Duration(seconds: 3),
           ),
         );
@@ -83,7 +82,7 @@ class ReverseSaleTransactionService extends TransactionBaseService {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.grey,
           duration: Duration(seconds: 3),
         ),
       );

@@ -9,14 +9,13 @@ import 'package:sahara_app/utils/configs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthModule {
-  
-  // 🆕 Add this method - check if user is logged in
+  //checks if user is logged in
   Future<bool> isLoggedIn() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getBool(TokenModel.isLoggedIn) ?? false;
   }
 
-  // 🆕 Add this method - get token for API calls (doesn't require credentials)
+  //gets token for API calls ,Looks for a stored token,If expired but has refresh_token gets a new one
   Future<String> getTokenForApiCall() async {
     TokenModel tokenModel = TokenModel();
     tokenModel = TokenModel.fromMap((await tokenModel.get(TokenModel.key)) ?? {});
@@ -35,25 +34,15 @@ class AuthModule {
     throw Exception('Authentication required - please login again');
   }
 
-  // login (your existing method)
-  Future<LoginResponse> login({
-    String email = 'elyudde@gmail.com',
-    String password = 'pass1234',
-  }) async {
+  // login ,Calls the server using password grant type
+  Future<LoginResponse> login({String email = 'elyudde@gmail.com', String password = 'pass1234'}) async {
     try {
-      await fetchToken(
-        grantType: GrantType.password,
-        username: email,
-        password: password,
-      );
+      await fetchToken(grantType: GrantType.password, username: email, password: password);
       return LoginResponse(message: "Welcome", success: true);
     } on BadRequest catch (_) {
       return LoginResponse(message: "Wrong credentials", success: false);
     } on InternalServerError catch (e) {
-      return LoginResponse(
-        message: e.message ?? 'Server Error',
-        success: false,
-      );
+      return LoginResponse(message: e.message ?? 'Server Error', success: false);
     } on TokenRequestError catch (e) {
       return LoginResponse(message: e.toString(), success: false);
     } catch (e) {
@@ -61,7 +50,7 @@ class AuthModule {
     }
   }
 
-  // logout (your existing method)
+  // logout,Deletes stored tokens,Marks user as logged out
   Future<void> logout() async {
     TokenModel tokenModel = TokenModel();
     await tokenModel.delete(TokenModel.key);
@@ -69,11 +58,8 @@ class AuthModule {
     await prefs.setBool(TokenModel.isLoggedIn, false);
   }
 
-  Future<String> fetchToken({
-    GrantType grantType = GrantType.refresh_token,
-    String? username,
-    String? password,
-  }) async {
+  //Prepares the headers with Basic Authentication (client_id + secret)
+  Future<String> fetchToken({GrantType grantType = GrantType.refresh_token, String? username, String? password}) async {
     // Debug the URL construction
     print('🔍 URL Debug:');
     print('  baseTatsUrl: "$baseTatsUrl"');
@@ -81,17 +67,11 @@ class AuthModule {
 
     // get token
     TokenModel tokenModel = TokenModel();
-    tokenModel = TokenModel.fromMap(
-      (await tokenModel.get(TokenModel.key)) ?? {},
-    );
+    tokenModel = TokenModel.fromMap((await tokenModel.get(TokenModel.key)) ?? {});
 
     print('🔍 Token Debug:');
-    print(
-      '  Current token: ${tokenModel.token?.substring(0, 10) ?? 'null'}...',
-    );
-    print(
-      '  Refresh token: ${tokenModel.refreshToken?.substring(0, 10) ?? 'null'}...',
-    );
+    print('  Current token: ${tokenModel.token?.substring(0, 10) ?? 'null'}...');
+    print('  Refresh token: ${tokenModel.refreshToken?.substring(0, 10) ?? 'null'}...');
     print('  Expiry: ${tokenModel.expiry}');
     print('  Is not expired: ${tokenModel.isNotExpired}');
 
@@ -122,10 +102,7 @@ class AuthModule {
 
     final String grantTypeName = grantType.name;
 
-    final Map<String, dynamic> body = {
-      'grant_type': grantTypeName,
-      'scope': 'transactions',
-    };
+    final Map<String, dynamic> body = {'grant_type': grantTypeName, 'scope': 'transactions'};
 
     final Encoding? encoding = Encoding.getByName('utf-8');
 
@@ -143,12 +120,7 @@ class AuthModule {
 
     // send request
     try {
-      final http.Response res = await oauth2Request(
-        authUrl,
-        headers,
-        body,
-        encoding,
-      );
+      final http.Response res = await oauth2Request(authUrl, headers, body, encoding);
 
       print('📡 OAuth Response: ${res.statusCode}');
 
@@ -160,10 +132,7 @@ class AuthModule {
           tokenModel.token = responseBody['access_token'];
           tokenModel.refreshToken = responseBody['refresh_token'];
           tokenModel.expiry = DateTime.now().add(
-            Duration(
-              seconds:
-                  int.tryParse(responseBody['expires_in'].toString()) ?? 0,
-            ),
+            Duration(seconds: int.tryParse(responseBody['expires_in'].toString()) ?? 0),
           );
 
           print('✅ Token obtained successfully');
@@ -215,12 +184,7 @@ class AuthModule {
     Encoding? encoding,
   ) async {
     try {
-      return await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: body,
-        encoding: encoding,
-      );
+      return await http.post(Uri.parse(url), headers: headers, body: body, encoding: encoding);
     } catch (e) {
       rethrow;
     }

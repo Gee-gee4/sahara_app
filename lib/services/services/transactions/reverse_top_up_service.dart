@@ -6,19 +6,14 @@ import 'package:sahara_app/modules/reverse_top_up_service.dart';
 import 'package:sahara_app/pages/reverse_top_up_page.dart';
 import 'transaction_base_service.dart';
 
-
 class ReverseTopUpTransactionService extends TransactionBaseService {
-  static Future<TransactionResult> handleReverseTopUp(
-    BuildContext context, 
-    StaffListModel user
-  ) async {
+  static Future<TransactionResult> handleReverseTopUp(BuildContext context, StaffListModel user) async {
     final receiptNumber = await TransactionBaseService.showInputDialog(
       context,
       'Reverse Topup',
       'Enter Receipt Id',
-      '(e.g., TR5250815153110)',
+      '',
       keyboardType: TextInputType.text,
-      maxLength: 20,
       validator: (input) {
         if (input.isEmpty) return 'Please enter a receipt number';
         return null;
@@ -30,10 +25,7 @@ class ReverseTopUpTransactionService extends TransactionBaseService {
     }
 
     try {
-      final result = await ReverseTopUpService.reverseTopUp(
-        originalRefNumber: receiptNumber,
-        user: user,
-      );
+      final result = await ReverseTopUpService.reverseTopUp(originalRefNumber: receiptNumber, user: user);
 
       if (result['success']) {
         final deviceId = await getSavedOrFetchDeviceId();
@@ -61,9 +53,20 @@ class ReverseTopUpTransactionService extends TransactionBaseService {
 
         return TransactionResult.success('Top-up reversed successfully', data: result);
       } else {
+        print('////////////');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${result['error']}'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 3),
+          ),
+        );
         return TransactionResult.error(result['error'] ?? 'Failed to reverse top-up');
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.grey, duration: Duration(seconds: 3)),
+      );
       return TransactionResult.error('Unexpected error: $e');
     }
   }

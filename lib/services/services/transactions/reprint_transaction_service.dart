@@ -6,19 +6,14 @@ import 'package:sahara_app/modules/reprint_service.dart';
 import 'package:sahara_app/pages/reprint_receipt_page.dart';
 import 'transaction_base_service.dart';
 
-
 class ReprintTransactionService extends TransactionBaseService {
-  static Future<TransactionResult> handleReprint(
-    BuildContext context, 
-    StaffListModel user
-  ) async {
+  static Future<TransactionResult> handleReprint(BuildContext context, StaffListModel user) async {
     final receiptNumber = await TransactionBaseService.showInputDialog(
       context,
       'Receipt Reprint',
       'Enter Receipt Id',
-      '(e.g., TR5250815153110)',
+      '',
       keyboardType: TextInputType.text,
-      maxLength: 20,
       validator: (input) {
         if (input.isEmpty) return 'Please enter a receipt number';
         return null;
@@ -32,14 +27,11 @@ class ReprintTransactionService extends TransactionBaseService {
     try {
       print('🔄 Fetching receipt: $receiptNumber');
 
-      final result = await ReprintService.getReceiptForReprint(
-        refNumber: receiptNumber,
-        user: user,
-      );
+      final result = await ReprintService.getReceiptForReprint(refNumber: receiptNumber, user: user);
 
       if (result['success']) {
         final deviceId = await getSavedOrFetchDeviceId();
-        
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -51,12 +43,23 @@ class ReprintTransactionService extends TransactionBaseService {
             ),
           ),
         );
-        
+
         return TransactionResult.success('Receipt fetched successfully', data: result);
       } else {
+        print('////////////');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed! ${result['error']}'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 3),
+          ),
+        );
         return TransactionResult.error(result['error'] ?? 'Failed to fetch receipt');
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.grey, duration: Duration(seconds: 3)),
+      );
       return TransactionResult.error('Unexpected error: $e');
     }
   }

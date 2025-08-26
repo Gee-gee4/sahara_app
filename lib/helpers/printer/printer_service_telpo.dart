@@ -1,7 +1,8 @@
+// lib/helpers/printing/printer_service_telpo.dart
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/models/product_card_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:telpo_flutter_sdk/telpo_flutter_sdk.dart';
-import '../models/product_card_details_model.dart';
 
 class PrinterServiceTelpo {
   static final _instance = PrinterServiceTelpo._internal();
@@ -9,7 +10,6 @@ class PrinterServiceTelpo {
   PrinterServiceTelpo._internal();
 
   final TelpoFlutterChannel _printer = TelpoFlutterChannel();
-
 
   Future<PrintResult> printReceiptForTransaction({
     required StaffListModel user,
@@ -20,12 +20,14 @@ class PrinterServiceTelpo {
     required String accountType,
     required String vehicleNumber,
     required bool showCardDetails,
-    required double? discount,
-    required double? clientTotal,
-    required double? customerBalance,
-    required List<ProductCardDetailsModel>? accountProducts,
-    required String? companyName,
-    required String? channelName,
+    required String refNumber,
+    required String termNumber,
+    double? discount,
+    double? clientTotal,
+    double? customerBalance,
+    List<ProductCardDetailsModel>? accountProducts,
+    String? companyName,
+    String? channelName,
   }) async {
     final sheet = TelpoPrintSheet();
     final isCardSale = showCardDetails && clientTotal != null && discount != null;
@@ -51,7 +53,7 @@ class PrinterServiceTelpo {
       final total = unitPrice * item.quantity;
       final name = item.productName.padRight(7).substring(0, 7);
       final price = unitPrice.toStringAsFixed(0).padLeft(5);
-      final qty = item.quantity;
+      final qty = item.quantity.toStringAsFixed(2);
       final totalStr = total.toStringAsFixed(0).padLeft(5);
       return "$name  $price  $qty  $totalStr";
     }
@@ -70,8 +72,11 @@ class PrinterServiceTelpo {
     );
     sheet.addElement(PrintData.space(line: 4));
     sheet.addElement(PrintData.text('SALE', alignment: PrintAlignment.center, fontSize: PrintedFontSize.size24));
-    sheet.addElement(PrintData.text('TERM# 8458cn34e3kf343', fontSize: PrintedFontSize.size24));
-    sheet.addElement(PrintData.text('REF# TR45739547549219', fontSize: PrintedFontSize.size24));
+    
+    // Use the passed parameters instead of hardcoded values
+    sheet.addElement(PrintData.text('TERM# $termNumber', fontSize: PrintedFontSize.size24));
+    sheet.addElement(PrintData.text('REF# $refNumber', fontSize: PrintedFontSize.size24));
+    
     sheet.addElement(PrintData.text('--------------------------------------------------------------------'));
 
     // Product Table

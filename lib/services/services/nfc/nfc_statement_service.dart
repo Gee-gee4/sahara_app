@@ -32,38 +32,30 @@ class NFCStatementService extends NFCBaseService {
       final nfc = NfcFunctions();
 
       // Step 2: Read account number from card
-      final accountResponse = await nfc.readSectorBlock(
-        sectorIndex: 1, 
-        blockSectorIndex: 0, 
-        useDefaultKeys: false
-      );
+      final accountResponse = await nfc.readSectorBlock(sectorIndex: 1, blockSectorIndex: 0, useDefaultKeys: false);
 
       if (accountResponse.status != NfcMessageStatus.success) {
         await FlutterNfcKit.finish();
         if (!context.mounted) return NFCResult.error('Context not mounted');
-        
+
         Navigator.of(context).pop();
         shouldDismissSpinner = false;
-        
+
         _showErrorMessage(context, 'Could not read card data. Please try again.');
         return NFCResult.error('Failed to read account number');
       }
 
       // Step 3: Read PIN from card
-      final pinResponse = await nfc.readSectorBlock(
-        sectorIndex: 2, 
-        blockSectorIndex: 0, 
-        useDefaultKeys: false
-      );
+      final pinResponse = await nfc.readSectorBlock(sectorIndex: 2, blockSectorIndex: 0, useDefaultKeys: false);
 
       await FlutterNfcKit.finish();
 
       if (pinResponse.status != NfcMessageStatus.success) {
         if (!context.mounted) return NFCResult.error('Context not mounted');
-        
+
         Navigator.of(context).pop();
         shouldDismissSpinner = false;
-        
+
         _showErrorMessage(context, 'Could not read card PIN.');
         return NFCResult.error('Failed to read PIN');
       }
@@ -77,17 +69,17 @@ class NFCStatementService extends NFCBaseService {
 
       if (accountNo.isEmpty || accountNo == '0') {
         if (!context.mounted) return NFCResult.error('Context not mounted');
-        
+
         Navigator.of(context).pop();
         shouldDismissSpinner = false;
-        
+
         _showErrorMessage(context, 'No assigned account found on this card.');
         return NFCResult.error('No assigned account found');
       }
 
       // Step 5: Dismiss spinner and show PIN dialog
       if (!context.mounted) return NFCResult.error('Context not mounted');
-      
+
       Navigator.of(context).pop();
       shouldDismissSpinner = false;
 
@@ -105,18 +97,16 @@ class NFCStatementService extends NFCBaseService {
       NFCBaseService.showLoadingSpinner(context);
       shouldDismissSpinner = true;
 
-      final result = await MiniStatementService.fetchMiniStatement(
-        accountNumber: accountNo, 
-        user: user
-      );
+      final result = await MiniStatementService.fetchMiniStatement(accountNumber: accountNo, user: user);
 
       if (!context.mounted) return NFCResult.error('Context not mounted');
-      
+
       Navigator.of(context).pop();
       shouldDismissSpinner = false;
 
       final prefs = await SharedPreferences.getInstance();
       final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
+      print('////////////////////////////////////////////////$companyName');
       final channelName = prefs.getString('channelName') ?? 'Station';
       final deviceId = await getSavedOrFetchDeviceId();
       final refNumber = await RefGenerator.generate();
@@ -137,13 +127,12 @@ class NFCStatementService extends NFCBaseService {
             ),
           ),
         );
-        
+
         return NFCResult.success('Mini statement retrieved successfully', data: result);
       } else {
         _showErrorMessage(context, result['error']);
         return NFCResult.error('Failed to fetch mini statement: ${result['error']}');
       }
-
     } catch (e) {
       await FlutterNfcKit.finish();
 
@@ -161,10 +150,9 @@ class NFCStatementService extends NFCBaseService {
       if (shouldDismissSpinner) {
         Navigator.of(context).pop();
       }
-      
+
       _showErrorMessage(context, 'Error: ${e.toString()}');
       return NFCResult.error('Error: ${e.toString()}');
-
     } finally {
       if (shouldDismissSpinner && context.mounted) {
         try {
@@ -177,35 +165,18 @@ class NFCStatementService extends NFCBaseService {
   }
 
   // PIN dialog for mini statement
-  static Future<bool> _showMiniStatementPinDialog(
-    BuildContext context, 
-    String accountNo, 
-    String correctPin
-  ) async {
-    return await NFCBaseService.showPinDialog(
-      context, 
-      accountNo, 
-      correctPin,
-      title: 'Enter PIN for Mini Statement',
-    );
+  static Future<bool> _showMiniStatementPinDialog(BuildContext context, String accountNo, String correctPin) async {
+    return await NFCBaseService.showPinDialog(context, accountNo, correctPin, title: 'Enter PIN for Mini Statement');
   }
 
   static void _showErrorMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message), 
-        backgroundColor: Colors.grey, 
-        duration: Duration(seconds: 2)
-      )
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.grey, duration: Duration(seconds: 2)));
     Navigator.of(context).pop();
   }
 
   static Future<void> _showTimeoutDialog(BuildContext context) async {
-    return NFCBaseService.showErrorDialog(
-      context,
-      "Timeout",
-      "No card detected. Please try again.",
-    );
+    return NFCBaseService.showErrorDialog(context, "Timeout", "No card detected. Please try again.");
   }
 }

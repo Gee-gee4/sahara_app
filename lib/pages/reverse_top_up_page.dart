@@ -1,53 +1,142 @@
 import 'package:flutter/material.dart';
+import 'package:sahara_app/helpers/printer/topup_printer_helper.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/home_page.dart';
-import 'package:sahara_app/pages/top_up_page.dart';
 import 'package:sahara_app/pages/top_up_receipt.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 
-class ReverseTopUpPage extends TopUpPage {
+class ReverseTopUpPage extends StatefulWidget {
+  final StaffListModel user;
+  final String accountNo;
+  final StaffListModel staff;
+  final Map<String, dynamic> topUpData;
+  final String refNumber; 
+  final String termNumber;
+  final double amount;
+  final String? companyName;
+  final String? channelName;
+
   const ReverseTopUpPage({
     super.key,
-    required super.user,
-    required super.accountNo,
-    required super.staff,
-    required super.topUpData,
-    required super.refNumber,
-    required super.termNumber,
-    required super.amount,
+    required this.user,
+    required this.accountNo,
+    required this.staff,
+    required this.topUpData, 
+    required this.refNumber, 
+    required this.termNumber,
+    required this.amount,
+    this.companyName,
+    this.channelName,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Top Up', style: TextStyle(color: Colors.white70)),
-        centerTitle: true,
-        backgroundColor: ColorsUniversal.appBarColor,
-        leading: IconButton(
-          icon: const Icon(Icons.home, color: Colors.white70),
-          onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => HomePage(user: user)),
-              (route) => false,
-            );
-          },
+  State<ReverseTopUpPage> createState() => _ReverseTopUpPageState();
+}
+
+class _ReverseTopUpPageState extends State<ReverseTopUpPage> {
+  
+  Future<void> _printReverseTopUpReceipt() async {
+    await TopUpPrinterHelper.printTopUpReceipt(
+      context: context,
+      user: widget.user,
+      title: "Reverse Top Up",
+      refNumber: widget.refNumber,
+      termNumber: widget.termNumber,
+      amount: widget.amount,
+      topUpData: widget.topUpData,
+      accountNo: widget.accountNo,
+      staffName: widget.staff.staffName,
+      isReversal: true, // This is the key difference
+      companyName: widget.companyName,
+      channelName: widget.channelName,
+    );
+  }
+
+  void _showEndTransactionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Exit Page'),
+        content: const Text(
+          'You will lose all progress if you exit from this page',
+          style: TextStyle(fontSize: 16),
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+            child: Text(
+              'Cancel',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => HomePage(user: widget.user)),
+                (route) => false,
+              );
+            },
+            child: Text(
+              'OK',
+              style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor),
+            ),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: TopUpReceipt(
-            title: "Reverse Top Up",
-            refNumber: refNumber,
-            termNumber: termNumber,
-            amount: amount,
-            topUpData: topUpData,
-            accountNo: accountNo,
-            staffName: staff.staffName,
-            isReversal: true,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (!didPop) {
+          _showEndTransactionDialog(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Reverse Top Up', style: TextStyle(color: Colors.white70)),
+          centerTitle: true,
+          backgroundColor: ColorsUniversal.appBarColor,
+          leading: IconButton(
+            icon: const Icon(Icons.home, color: Colors.white70),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => HomePage(user: widget.user)),
+                (route) => false,
+              );
+            },
           ),
         ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: TopUpReceipt(
+              title: "Reverse Top Up",
+              refNumber: widget.refNumber,
+              termNumber: widget.termNumber,
+              amount: widget.amount,
+              topUpData: widget.topUpData,
+              accountNo: widget.accountNo,
+              staffName: widget.staff.staffName,
+              isReversal: true,
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _printReverseTopUpReceipt,
+          backgroundColor: ColorsUniversal.buttonsColor,
+          child: const Icon(Icons.print, color: Colors.white),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }

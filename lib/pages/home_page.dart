@@ -221,8 +221,8 @@ class _HomePageState extends State<HomePage> {
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'sync', child: Text('Sync Items')),
-              PopupMenuItem(value: 'operation_mode', child: Text('Operation Mode')),
-              PopupMenuItem(value: 'receipt_settings', child: Text('Receipt & Print Settings')),
+              PopupMenuItem(value: 'operation_mode', child: Text('Advanced Settings')),
+              PopupMenuItem(value: 'receipt_settings', child: Text('Pos Settings')),
               PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
             ],
           ),
@@ -246,7 +246,12 @@ class _HomePageState extends State<HomePage> {
                         child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                         onPressed: () {
                           Navigator.pop(context);
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => UsersPage()));
+
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => UsersPage()),
+                            (route) => false, // Remove all previous routes
+                          );
                         },
                       ),
                     ],

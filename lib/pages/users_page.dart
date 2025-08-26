@@ -112,6 +112,7 @@ class _UsersPageState extends State<UsersPage> {
         centerTitle: true,
         backgroundColor: ColorsUniversal.appBarColor,
         iconTheme: const IconThemeData(color: Colors.white),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             onPressed: refreshStaffList,

@@ -44,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
                 });
               },
               keyboardType: TextInputType.number,
+              maxDigit: 4
             ),
             const SizedBox(height: 12),
             myButton(context, () {

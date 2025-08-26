@@ -11,6 +11,7 @@ Column reusableTextField(
   TextEditingController controller, {
   Function()? toggleOnOff,
   TextInputType? keyboardType,
+  int? maxDigit,
 }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -20,17 +21,14 @@ Column reusableTextField(
       //   child: Text('$text:'),
       // ),
       TextField(
+        maxLength: maxDigit,
         controller: controller,
         obscureText: !showText,
         enableSuggestions: showText,
         cursorColor: hexToColor('903500'),
         style: const TextStyle(color: Colors.black),
-        keyboardType:
-            keyboardType ??
-            (!showText ? TextInputType.visiblePassword : TextInputType.emailAddress),
-        inputFormatters: keyboardType == TextInputType.number
-            ? [FilteringTextInputFormatter.digitsOnly]
-            : null,
+        keyboardType: keyboardType ?? (!showText ? TextInputType.visiblePassword : TextInputType.emailAddress),
+        inputFormatters: keyboardType == TextInputType.number ? [FilteringTextInputFormatter.digitsOnly] : null,
         decoration: InputDecoration(
           prefixIcon: icon != null ? Icon(icon, color: Colors.teal[100]) : null,
           filled: true,
@@ -44,10 +42,7 @@ Column reusableTextField(
               ? null
               : IconButton(
                   onPressed: toggleOnOff,
-                  icon: Icon(
-                    showText ? Icons.visibility_off : Icons.visibility,
-                    color: ColorsUniversal.buttonsColor,
-                  ),
+                  icon: Icon(showText ? Icons.visibility_off : Icons.visibility, color: ColorsUniversal.buttonsColor),
                 ),
         ),
       ),
@@ -56,7 +51,6 @@ Column reusableTextField(
 }
 
 //........................................................................................
-
 
 SizedBox myButton(
   BuildContext context,
@@ -73,9 +67,7 @@ SizedBox myButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: ColorsUniversal.buttonsColor,
         elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
       onPressed: isLoading ? null : () => onTap(),
       child: isLoading
@@ -96,10 +88,7 @@ SizedBox myButton(
                       ];
                       final color = colors[index % colors.length];
                       return DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                        ),
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                       );
                     },
                   ),
@@ -113,7 +102,6 @@ SizedBox myButton(
   );
 }
 
-
 //........................................................................................
 
 AppBar myAppBar(String titleText, {List<Widget>? actions}) {
@@ -122,9 +110,11 @@ AppBar myAppBar(String titleText, {List<Widget>? actions}) {
     centerTitle: true,
     backgroundColor: ColorsUniversal.appBarColor,
     iconTheme: const IconThemeData(color: Colors.white),
-    actions: actions,actionsPadding: EdgeInsets.symmetric(horizontal: 6),
+    actions: actions,
+    actionsPadding: EdgeInsets.symmetric(horizontal: 6),
   );
 }
+
 //..........................................................................................................
 //CHANGE PIN TEXTFIELD
 TextField myPinTextField({
@@ -146,9 +136,7 @@ TextField myPinTextField({
       labelStyle: TextStyle(color: Colors.brown[300]),
       hintText: myHintText,
       hintStyle: TextStyle(color: Colors.grey[400]),
-      focusedBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
-      ),
+      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
     ),
   );
 }

@@ -75,6 +75,7 @@ class _TapCardPageState extends State<TapCardPage> {
       }
     } catch (e) {
       print('💥 Unexpected error in ${widget.action.name}: $e');
+      print('////////-----');
 
       // Show a generic error if something unexpected happens
       if (mounted && !_isCancelled) {

@@ -21,9 +21,9 @@ import '../../../utils/colors_universal.dart';
 class NFCSalesService extends NFCBaseService {
   // CASH AND CARD SALE
   static Future<NFCResult> handleCardSale(
-    BuildContext context, 
-    StaffListModel user, 
-    Map<String, dynamic>? extraData
+    BuildContext context,
+    StaffListModel user,
+    Map<String, dynamic>? extraData,
   ) async {
     final nfc = NfcFunctions();
     String? cardUID;
@@ -37,11 +37,7 @@ class NFCSalesService extends NFCBaseService {
       print("🎯 Card UID: $cardUID");
 
       // Step 1: Try to read account number from card
-      final accountResult = await nfc.readSectorBlock(
-        sectorIndex: 1, 
-        blockSectorIndex: 0, 
-        useDefaultKeys: false
-      );
+      final accountResult = await nfc.readSectorBlock(sectorIndex: 1, blockSectorIndex: 0, useDefaultKeys: false);
 
       // Step 2: Check if account read was successful
       if (accountResult.status != NfcMessageStatus.success) {
@@ -74,11 +70,7 @@ class NFCSalesService extends NFCBaseService {
       }
 
       // Step 4: Try to read PIN from card
-      final pinResult = await nfc.readSectorBlock(
-        sectorIndex: 2, 
-        blockSectorIndex: 0, 
-        useDefaultKeys: false
-      );
+      final pinResult = await nfc.readSectorBlock(sectorIndex: 2, blockSectorIndex: 0, useDefaultKeys: false);
 
       if (pinResult.status != NfcMessageStatus.success) {
         if (context.mounted) Navigator.pop(context);
@@ -121,18 +113,17 @@ class NFCSalesService extends NFCBaseService {
 
       // Show cash amount dialog
       final result = await _showCashAmountDialog(
-        context, 
-        accountData, 
-        accountResult.data.trim(), 
-        pinResult.data.trim(), 
-        cardUID, 
+        context,
+        accountData,
+        accountResult.data.trim(),
+        pinResult.data.trim(),
+        cardUID,
         accountNo,
         user,
-        extraData
+        extraData,
       );
 
       return result;
-
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
 
@@ -151,9 +142,9 @@ class NFCSalesService extends NFCBaseService {
 
   // CARD ONLY SALE
   static Future<NFCResult> handleOnlyCardSales(
-    BuildContext context, 
-    StaffListModel user, 
-    Map<String, dynamic>? extraData
+    BuildContext context,
+    StaffListModel user,
+    Map<String, dynamic>? extraData,
   ) async {
     NFCBaseService.showLoadingSpinner(context);
     String? cardUID;
@@ -173,11 +164,7 @@ class NFCSalesService extends NFCBaseService {
       final nfc = NfcFunctions();
 
       // Step 2: Read account number from card
-      final accountResult = await nfc.readSectorBlock(
-        sectorIndex: 1, 
-        blockSectorIndex: 0, 
-        useDefaultKeys: false
-      );
+      final accountResult = await nfc.readSectorBlock(sectorIndex: 1, blockSectorIndex: 0, useDefaultKeys: false);
 
       if (accountResult.status != NfcMessageStatus.success) {
         Navigator.of(context).pop();
@@ -194,11 +181,7 @@ class NFCSalesService extends NFCBaseService {
       }
 
       // Step 4: Read PIN from card
-      final pinResult = await nfc.readSectorBlock(
-        sectorIndex: 2, 
-        blockSectorIndex: 0, 
-        useDefaultKeys: false
-      );
+      final pinResult = await nfc.readSectorBlock(sectorIndex: 2, blockSectorIndex: 0, useDefaultKeys: false);
 
       if (pinResult.status != NfcMessageStatus.success) {
         Navigator.of(context).pop();
@@ -240,33 +223,32 @@ class NFCSalesService extends NFCBaseService {
       // Step 8: Handle equipment selection
       if (accountData.equipmentMask != null && accountData.equipmentMask!.isNotEmpty) {
         final result = await _showEquipmentDialog(
-          context, 
-          accountData, 
-          cardPin, 
-          discount, 
-          netTotal, 
-          clientTotal, 
-          cardUID, 
+          context,
+          accountData,
+          cardPin,
+          discount,
+          netTotal,
+          clientTotal,
+          cardUID,
           accountNo,
-          user
+          user,
         );
         return result;
       } else {
         final result = await _showCardPinDialog(
           context,
-          accountData, 
-          cardPin, 
-          discount, 
-          netTotal, 
-          clientTotal, 
-          'No Equipment', 
-          cardUID, 
+          accountData,
+          cardPin,
+          discount,
+          netTotal,
+          clientTotal,
+          'No Equipment',
+          cardUID,
           accountNo,
-          user
+          user,
         );
         return result;
       }
-
     } catch (e) {
       Navigator.of(context).pop();
       if (e is TimeoutException) {
@@ -422,9 +404,9 @@ class NFCSalesService extends NFCBaseService {
       },
     );
 
-    return dialogResult 
-      ? NFCResult.success('Cash card sale completed successfully')
-      : NFCResult.error('Cash card sale cancelled');
+    return dialogResult
+        ? NFCResult.success('Cash card sale completed successfully')
+        : NFCResult.error('Cash card sale cancelled');
   }
 
   static double _calculateClientTotal(List<ProductCardDetailsModel> accountProducts) {
@@ -482,22 +464,19 @@ class NFCSalesService extends NFCBaseService {
   }
 
   static void _showErrorMessage(BuildContext context, String message) {
+    print(message);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message), 
-        backgroundColor: Colors.grey, 
-        duration: Duration(seconds: 2)
-      )
+        content: Text('Failed! Check if the device supports NFC'),
+        backgroundColor: Colors.grey,
+        duration: Duration(seconds: 2),
+      ),
     );
     Navigator.of(context).pop();
   }
 
   static Future<void> _showTimeoutDialog(BuildContext context) async {
-    return NFCBaseService.showErrorDialog(
-      context,
-      "Card Timeout",
-      "No card detected. Please try again.",
-    );
+    return NFCBaseService.showErrorDialog(context, "Card Timeout", "No card detected. Please try again.");
   }
 
   static Future<void> _showInsufficientBalanceDialog(
@@ -632,9 +611,9 @@ class NFCSalesService extends NFCBaseService {
       ),
     );
 
-    return dialogCompleted 
-      ? NFCResult.success('Equipment selected successfully')
-      : NFCResult.error('Equipment selection cancelled');
+    return dialogCompleted
+        ? NFCResult.success('Equipment selected successfully')
+        : NFCResult.error('Equipment selection cancelled');
   }
 
   static Future<NFCResult> _showCardPinDialog(
@@ -757,9 +736,9 @@ class NFCSalesService extends NFCBaseService {
       ),
     );
 
-    return dialogCompleted 
-      ? NFCResult.success('Card payment completed successfully')
-      : NFCResult.error('Card payment cancelled');
+    return dialogCompleted
+        ? NFCResult.success('Card payment completed successfully')
+        : NFCResult.error('Card payment cancelled');
   }
 
   static Widget _infoRow(String label, String value, {bool isBold = false, Color? color}) {

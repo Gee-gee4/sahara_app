@@ -7,7 +7,7 @@ const String consumerKey = 'com.cloudtats.dashboard';
 const String consumerSecret = 'GHj3UhLip501CDCa';
 
 // ✅ Start with working project's default, but allow override
-String baseTatsUrl = 'http://etims.saharafcs.com:8889';
+String baseTatsUrl = 'http://auto.saharafcs.com:8800';
 
 // ✅ Make these functions instead of static strings so they update when baseTatsUrl changes
 String get authUrl => '$baseTatsUrl/auth/token';

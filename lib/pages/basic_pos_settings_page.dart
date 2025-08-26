@@ -66,7 +66,7 @@ class _BasicPosSettingsPageState extends State<BasicPosSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsUniversal.background,
-      appBar: myAppBar('Receipt & Print Settings'),
+      appBar: myAppBar('Pos Settings'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -78,7 +78,7 @@ class _BasicPosSettingsPageState extends State<BasicPosSettingsPage> {
             RadioListTile(
               activeColor: ColorsUniversal.buttonsColor,
               tileColor: Colors.brown[100],
-              title: Text('Single Receipt'),
+              title: Text('Single'),
               value: ReceiptNumber.single,
               groupValue: _receipt,
               onChanged: (value) => setState(() => _receipt = value!),
@@ -90,7 +90,7 @@ class _BasicPosSettingsPageState extends State<BasicPosSettingsPage> {
             RadioListTile(
               activeColor: ColorsUniversal.buttonsColor,
               tileColor: Colors.brown[100],
-              title: Text('Double Receipt'),
+              title: Text('Double'),
               value: ReceiptNumber.double,
               groupValue: _receipt,
               onChanged: (value) => setState(() => _receipt = value!),

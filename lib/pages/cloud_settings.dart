@@ -74,7 +74,7 @@ class _CloudSettingsState extends State<CloudSettings> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Please contact your administrator to link this device to the station, or go back and select the correct resource name.',
+              'Please contact your administrator to link this device to the station.',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
@@ -96,23 +96,6 @@ class _CloudSettingsState extends State<CloudSettings> {
         ],
       ),
     );
-    // AlertDialog(
-    //   title: const Text('Device Not Linked'),
-    //   content: Text(
-    //     'This device is not linked to any station.\n\n'
-    //     'Device ID:\n$deviceId\n\n'
-    //     'Please link this device in the backend before trying again.',
-    //   ),
-    //   actions: [
-    //     TextButton(
-    //       child: const Text('OK'),
-    //       onPressed: () {
-    //         Navigator.of(context).pop(); // close dialog
-    //         Navigator.of(context).pop(); // close CloudSettings page
-    //       },
-    //     ),
-    //   ],
-    // ),
   }
 
   Future<void> _handleCloudSync() async {

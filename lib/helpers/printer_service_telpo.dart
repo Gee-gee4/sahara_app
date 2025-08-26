@@ -11,8 +11,6 @@ class PrinterServiceTelpo {
   final TelpoFlutterChannel _printer = TelpoFlutterChannel();
 
 
-
-
   Future<PrintResult> printReceiptForTransaction({
     required StaffListModel user,
     required List<CartItem> cartItems,

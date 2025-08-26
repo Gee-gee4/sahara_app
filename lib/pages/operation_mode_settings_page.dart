@@ -52,22 +52,19 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
     });
   }
 
-  bool _validateAutoModeSettings() {
-    if (_newMode == OperationMode.auto) {
-      if (_urlController.text.trim().isEmpty ||
-          _stationNameController.text.trim().isEmpty ||
-          _fetchingTimeController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Please fill in all auto mode settings'),
-            backgroundColor: Colors.grey,
-          ),
-        );
-        return false;
-      }
-    }
-    return true;
-  }
+  // bool _validateAutoModeSettings() {
+  //   if (_newMode == OperationMode.auto) {
+  //     if (_urlController.text.trim().isEmpty ||
+  //         _stationNameController.text.trim().isEmpty ||
+  //         _fetchingTimeController.text.trim().isEmpty) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text('Please fill in all auto mode settings'), backgroundColor: Colors.grey));
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // }
 
   Future<void> _handleModeChange() async {
     if (_currentMode == _newMode) {
@@ -76,9 +73,9 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       return;
     }
 
-    if (!_validateAutoModeSettings()) {
-      return;
-    }
+    // if (!_validateAutoModeSettings()) {
+    //   return;
+    // }
 
     setState(() => _isLoading = true);
 
@@ -105,12 +102,11 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
             duration: Duration(seconds: 2),
           ),
         );
-
       } else {
         // Switching to manual - save mode and trigger re-sync
         await SharedPrefsHelper.savePosSettings(
           mode: 'manual',
-          receiptCount: 1, // Keep existing receipt count  
+          receiptCount: 1, // Keep existing receipt count
           printPolicies: false, // Keep existing print policies
         );
 
@@ -133,15 +129,11 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
           (route) => false, // Remove all previous routes
         );
       }
-
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save settings'),
-          backgroundColor: Colors.grey,
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save settings'), backgroundColor: Colors.grey));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -154,42 +146,36 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
         SizedBox(height: 16),
         Text('Auto Mode Configuration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
         SizedBox(height: 12),
-        
+
         TextField(
           controller: _urlController,
           decoration: InputDecoration(
             labelText: 'URL',
             hintText: 'Enter API URL',
             border: OutlineInputBorder(),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
-            ),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
           ),
         ),
         SizedBox(height: 12),
-        
+
         TextField(
           controller: _stationNameController,
           decoration: InputDecoration(
             labelText: 'Station Name',
             hintText: 'Enter station name',
             border: OutlineInputBorder(),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
-            ),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
           ),
         ),
         SizedBox(height: 12),
-        
+
         TextField(
           controller: _fetchingTimeController,
           decoration: InputDecoration(
             labelText: 'Fetching Time',
             hintText: 'Enter time in seconds',
             border: OutlineInputBorder(),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
-            ),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
           ),
           keyboardType: TextInputType.number,
         ),
@@ -201,7 +187,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsUniversal.background,
-      appBar: myAppBar('Operation Mode'),
+      appBar: myAppBar('Advanced Settings'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -209,14 +195,10 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
           children: [
             Text(
               'Current Mode: ${_currentMode == OperationMode.manual ? 'Manual' : 'Auto'}',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: ColorsUniversal.buttonsColor,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: ColorsUniversal.buttonsColor),
             ),
             SizedBox(height: 20),
-            
+
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -224,50 +206,32 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                   children: [
                     Text('Select Operation Mode', style: TextStyle(fontSize: 16)),
                     SizedBox(height: 12),
-                    
+
                     RadioListTile(
                       activeColor: ColorsUniversal.buttonsColor,
                       tileColor: Colors.brown[100],
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Manual'),
-                          Text(
-                            'Select products manually from categories',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
+                      title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Manual')]),
                       value: OperationMode.manual,
                       groupValue: _newMode,
                       onChanged: (value) => setState(() => _newMode = value!),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    
+
                     SizedBox(height: 12),
-                    
+
                     RadioListTile(
                       activeColor: ColorsUniversal.buttonsColor,
                       tileColor: Colors.brown[100],
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Auto'),
-                          Text(
-                            'Fetch pumps/nozzles automatically for fuel dispensing',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
+                      title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Auto')]),
                       value: OperationMode.auto,
                       groupValue: _newMode,
                       onChanged: (value) => setState(() => _newMode = value!),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    
+
                     // Show auto mode settings when auto is selected
                     if (_newMode == OperationMode.auto) _buildAutoModeSettings(),
-                    
+
                     if (_newMode != _currentMode) ...[
                       SizedBox(height: 16),
                       Container(
@@ -295,9 +259,9 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                 ),
               ),
             ),
-            
+
             SizedBox(height: 16),
-            
+
             SizedBox(
               width: MediaQuery.of(context).size.width,
               height: 55.0,
@@ -305,9 +269,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ColorsUniversal.buttonsColor,
                   elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                 ),
                 onPressed: _isLoading ? null : _handleModeChange,
                 child: _isLoading
@@ -327,10 +289,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                           Text('Saving...', style: TextStyle(color: Colors.white)),
                         ],
                       )
-                    : Text(
-                        _currentMode == _newMode ? 'BACK' : 'APPLY CHANGES',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                    : Text(_currentMode == _newMode ? 'BACK' : 'APPLY CHANGES', style: TextStyle(color: Colors.white)),
               ),
             ),
           ],

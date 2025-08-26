@@ -228,35 +228,34 @@ class _TapCardPageState extends State<TapCardPage> {
                   child: Image.asset('assets/images/nfc_scan.png', fit: BoxFit.fitHeight, height: 300),
                 ),
                 Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12, left: 8, right: 8),
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width,
-                          height: 55.0,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorsUniversal.buttonsColor,
-                              elevation: 1,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                            ),
-                            onPressed: (isProcessing || _isCancelled)
-                                ? null
-                                : () {
-                                    _executeAction();
-                                  },
-                            child: Text(
-                              isProcessing ? 'PROCESSING...' : 'TAP AGAIN !',
-                              style: TextStyle(
-                                fontSize: 19,
-                                color: (isProcessing || _isCancelled) ? Colors.white38 : Colors.white70,
-                              ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12, left: 8, right: 8),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        height: 55.0,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ColorsUniversal.buttonsColor,
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          onPressed: (isProcessing || _isCancelled)
+                              ? null
+                              : () {
+                                  _executeAction();
+                                },
+                          child: Text(
+                            isProcessing ? 'PROCESSING...' : 'TAP AGAIN !',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: (isProcessing || _isCancelled) ? Colors.white38 : Colors.white70,
                             ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],

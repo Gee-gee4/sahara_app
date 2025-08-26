@@ -13,33 +13,26 @@ class UnifiedPrinterHelper {
   static Future<void> printDocument({
     required BuildContext context,
     required StaffListModel user,
-    required String documentType, // 'receipt', 'cardDetails', 'miniStatement', etc.
+    required String documentType,
     required Future<PrintResult> Function() printFunction,
     int? customDelayMs,
     bool navigateToHome = true,
     String? successMessage,
+    bool ignoreReceiptCount = false, // NEW FLAG
   }) async {
     // Check printer status before starting
     final printerReady = await _checkPrinterStatus(context);
     if (!printerReady) return;
 
-    final receiptCount = await SharedPrefsHelper.getReceiptCount();
+    // Use receiptCount only if ignoreReceiptCount is false
+    final receiptCount = ignoreReceiptCount ? 1 : await SharedPrefsHelper.getReceiptCount();
 
     for (int i = 0; i < receiptCount; i++) {
       print('🖨️ Printing $documentType ${i + 1} of $receiptCount');
 
-      // Check printer status before each print
       if (i > 0) {
         final statusOk = await _checkPrinterStatus(context);
-        if (!statusOk) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Printer issue detected before ${documentType.toLowerCase()} ${i + 1}. Printing stopped."),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
+        if (!statusOk) return;
       }
 
       final result = await printFunction();
@@ -56,20 +49,13 @@ class UnifiedPrinterHelper {
 
       print('✅ $documentType ${i + 1} print command sent');
 
-      // Wait for printer to actually finish printing
       if (i < receiptCount - 1) {
-        print('⏳ Ensuring printer is ready for next $documentType...');
-        
-        // Use custom delay if provided, otherwise use defaults based on document type
         final delayMs = customDelayMs ?? _getDefaultDelayForDocumentType(documentType);
         await Future.delayed(Duration(milliseconds: delayMs));
         await _waitForPrinterToFinish();
       }
     }
 
-    print('🎉 All $documentType documents printed');
-
-    // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(successMessage ?? 'All ${documentType.toLowerCase()}s printed successfully!'),
@@ -154,7 +140,7 @@ class UnifiedPrinterHelper {
           return false;
 
         case TelpoStatus.unknown:
-        await _showPrinterErrorDialog(
+          await _showPrinterErrorDialog(
             context,
             'Printer Error',
             'Failed! Please check if the device supports printing services and try again.',
@@ -175,12 +161,7 @@ class UnifiedPrinterHelper {
   }
 
   // Shared printer error dialog
-  static Future<void> _showPrinterErrorDialog(
-    BuildContext context,
-    String title,
-    String message,
-    IconData icon,
-  ) async {
+  static Future<void> _showPrinterErrorDialog(BuildContext context, String title, String message, IconData icon) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -195,10 +176,7 @@ class UnifiedPrinterHelper {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    color: ColorsUniversal.buttonsColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(color: ColorsUniversal.buttonsColor, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -209,17 +187,13 @@ class UnifiedPrinterHelper {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'OK',
-                style: TextStyle(
-                  color: ColorsUniversal.buttonsColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ),
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                
+
                 // Show loading spinner during retry
                 showDialog(
                   context: context,
@@ -231,32 +205,25 @@ class UnifiedPrinterHelper {
                       itemBuilder: (context, index) {
                         final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
                         return DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: colors[index % colors.length],
-                            shape: BoxShape.circle,
-                          ),
+                          decoration: BoxDecoration(color: colors[index % colors.length], shape: BoxShape.circle),
                         );
                       },
                     ),
                   ),
                 );
-                
+
                 await Future.delayed(Duration(milliseconds: 800));
-                
+
                 // ignore: unused_local_variable
                 final printerReady = await _checkPrinterStatus(context);
-                
+
                 if (context.mounted) {
                   Navigator.of(context).pop(); // Close spinner
                 }
               },
               child: Text(
                 'Retry',
-                style: TextStyle(
-                  color: ColorsUniversal.buttonsColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -280,7 +247,7 @@ class UnifiedPrinterHelper {
         return 'Data transmission failed';
       case PrintResult.other:
         return 'Other printer error';
-      }
+    }
   }
 
   // Shared printer wait function

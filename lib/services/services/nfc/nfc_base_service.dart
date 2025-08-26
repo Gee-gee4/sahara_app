@@ -71,7 +71,7 @@ abstract class NFCBaseService {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: TextStyle(fontSize: 16)),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.grey,
         duration: Duration(seconds: 3),
       ),
     );

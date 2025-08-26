@@ -126,8 +126,10 @@ abstract class TransactionBaseService {
                     keyboardType: keyboardType,
                     obscureText: obscureText,
                     maxLength: maxLength,
+                    cursorColor: ColorsUniversal.buttonsColor,
                     decoration: InputDecoration(
                       labelText: labelText,
+                      labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
                       hintText: hintText,
                       errorText: errorMessage,
                       border: OutlineInputBorder(),

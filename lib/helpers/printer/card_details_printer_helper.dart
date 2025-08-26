@@ -29,6 +29,7 @@ class CardDetailsPrinterHelper {
       customDelayMs: 3000,
       navigateToHome: navigateToHome,
       successMessage: 'All card details printed successfully!',
+      ignoreReceiptCount: true
     );
   }
 }

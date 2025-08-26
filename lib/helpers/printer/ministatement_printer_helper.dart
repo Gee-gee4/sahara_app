@@ -34,6 +34,7 @@ class MiniStatementPrinterHelper {
       customDelayMs: 2500,
       navigateToHome: navigateToHome,
       successMessage: 'All statements printed successfully!',
+      ignoreReceiptCount: true
     );
   }
 }

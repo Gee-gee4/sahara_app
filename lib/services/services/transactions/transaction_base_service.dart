@@ -58,7 +58,7 @@ abstract class TransactionBaseService {
     String title,
     String message,
     String confirmText, {
-    Color confirmColor = Colors.red,
+    // Color confirmColor = ColorsUniversal.buttonsColor,
     String cancelText = 'Cancel',
   }) async {
     return await showDialog<bool>(
@@ -69,26 +69,26 @@ abstract class TransactionBaseService {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.warning, color: Colors.orange, size: 48),
-              SizedBox(height: 16),
+              // Icon(Icons.warning, color: Colors.orange, size: 48),
+              // SizedBox(height: 16),
               Text(message),
               SizedBox(height: 16),
               Text(
                 'This action cannot be undone.', 
-                style: TextStyle(color: Colors.red, fontSize: 12)
+                style: TextStyle(color: ColorsUniversal.appBarColor, fontSize: 12,fontStyle: FontStyle.italic)
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text(cancelText, style: TextStyle(color: Colors.grey[600])),
+              child: Text(cancelText, style: TextStyle(color: ColorsUniversal.buttonsColor)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               child: Text(
                 confirmText,
-                style: TextStyle(color: confirmColor, fontWeight: FontWeight.bold),
+                style: TextStyle(color: ColorsUniversal.buttonsColor,fontSize: 18),
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:sahara_app/models/transaction_result.dart';
 import 'package:sahara_app/modules/reverse_sale_service.dart' as OriginalReverseSaleService;
 import 'package:sahara_app/pages/reverse_sale_page.dart';
 import 'package:sahara_app/helpers/device_id_helper.dart';
+import 'package:sahara_app/widgets/loading_spinner.dart' as NFCBaseService;
 import 'transaction_base_service.dart';
 
 class ReverseSaleTransactionService extends TransactionBaseService {
@@ -31,7 +32,7 @@ class ReverseSaleTransactionService extends TransactionBaseService {
     final shouldReverse = await TransactionBaseService.showConfirmationDialog(
       context,
       'Confirm Reversal',
-      'Are you sure you want to reverse this transaction?\n\nReceipt: $receiptNumber',
+      'Are you sure you want to reverse this transaction?\n\nReceipt Id: $receiptNumber',
       'Reverse',
     );
 
@@ -42,10 +43,16 @@ class ReverseSaleTransactionService extends TransactionBaseService {
     try {
       print('🔄 Reversing transaction: $receiptNumber');
 
+      // Show loading spinner
+      NFCBaseService.showLoadingSpinner(context);
+
       final result = await OriginalReverseSaleService.ReverseSaleService.reverseTransaction(
         originalRefNumber: receiptNumber,
         user: user,
       );
+
+      // Hide loading spinner
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
 
       if (result['success']) {
         // Get device ID for the receipt
@@ -78,6 +85,9 @@ class ReverseSaleTransactionService extends TransactionBaseService {
         return TransactionResult.error(result['error']);
       }
     } catch (e) {
+      // Hide loading spinner if it's still showing
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      
       // Show error in a snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

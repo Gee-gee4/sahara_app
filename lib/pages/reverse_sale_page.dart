@@ -79,7 +79,7 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
     final TextStyle reversalStyle = const TextStyle(
       fontFamily: 'Courier',
       fontSize: 14,
-      color: Colors.red,
+      // color: Colors.red,
       fontWeight: FontWeight.bold,
     );
 
@@ -181,46 +181,46 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
 
                   // Transaction info
                   Text('TERM# ${widget.terminalName}', style: receiptStyle),
-                  Text('ORIGINAL REF# ${widget.originalRefNumber}', style: receiptStyle),
-                  Text('REVERSAL REF# ${widget.reversalRefNumber}', style: reversalStyle),
+                  // Text('ORIGINAL REF# ${widget.originalRefNumber}', style: receiptStyle),
+                  Text('REF# ${widget.reversalRefNumber}', style: receiptStyle),
                   const Divider(),
 
                   // Reversal notice
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        border: Border.all(color: Colors.red),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'TRANSACTION REVERSED',
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ),
-                  ),
+                  // Center(
+                  //   child: Container(
+                  //     padding: const EdgeInsets.all(8),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.red[50],
+                  //       border: Border.all(color: Colors.red),
+                  //       borderRadius: BorderRadius.circular(4),
+                  //     ),
+                  //     child: const Text(
+                  //       'TRANSACTION REVERSED',
+                  //       style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
+                  //     ),
+                  //   ),
+                  // ),
                   const SizedBox(height: 12),
 
                   // Product listing header
-                  Text('Prod    Price  Qty  Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
+                  Text('Prod    Price  Qty   Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
 
                   // Product lines - directly from API data (with negative values to show reversal)
                   ...ticketLines.map((line) {
                     final name = (line['productVariationName'] ?? '').toString().padRight(7).substring(0, 7);
-                    final price = (line['productVariationPrice'] ?? 0).toStringAsFixed(0).padLeft(5);
-                    final qty = -(line['units'] ?? 0); // Negative quantity for reversal
+                    final price = (line['productVariationPrice'] ?? 0).toStringAsFixed(0).padLeft(4);
+                    final qty = (-(line['units'] ?? 0)).toStringAsFixed(2); // Negative quantity for reversal
                     final total = (-(line['totalMoneySold'] ?? 0)).toStringAsFixed(0).padLeft(5); // Negative total
-                    return Text('$name  $price  $qty  $total', style: reversalStyle);
+                    return Text('$name  $price  $qty  $total', style: receiptStyle);
                   }),
 
                   const Divider(),
 
                   // Totals section (negative values for reversal)
-                  _row('Sub Total', (-totalUsed).toStringAsFixed(2), reversalStyle),
-                  _row('Total', (-totalUsed).toStringAsFixed(2), reversalStyle),
-                  _row('Net Total', (-totalUsed).toStringAsFixed(2), reversalStyle),
+                  _row('Sub Total', (-totalUsed).toStringAsFixed(2), receiptStyle),
+                  _row('Total', (-totalUsed).toStringAsFixed(2), receiptStyle),
+                  _row('Net Total', (-totalUsed).toStringAsFixed(2), receiptStyle),
                   const Divider(),
 
                   // Payment section (refund information)
@@ -253,18 +253,19 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
                   // Refund notice
                   const Center(
                     child: Text(
-                      'REFUND PROCESSED',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                      'APPROVAL',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
                   const SizedBox(height: 8),
 
                   if (wasCardSale) ...[
-                    const Center(child: Text('Amount has been credited')),
-                    const Center(child: Text('back to your account')),
+                    const Center(child: Text('Cardholder acknowledgementreceipt')),
+                    const Center(child: Text('of goods and/ services in the')),
+                    const Center(child: Text('amountof the total show hereon.')),
                   ] else ...[
-                    const Center(child: Text('Please collect your refund')),
-                    const Center(child: Text('from the cashier')),
+                    const Center(child: Text('Customer acknowledges the reversal')),
+                    const Center(child: Text('of transaction and refund')),
                   ],
 
                   const SizedBox(height: 16),
@@ -272,7 +273,7 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
                   // Approval section (only for card sales)
                   if (wasCardSale) ...[
                     const Center(
-                      child: Text('REVERSAL ACKNOWLEDGMENT', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('Thank You', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                     const Center(child: Text('Customer acknowledges the reversal')),
                     const Center(child: Text('of transaction and refund')),
@@ -288,7 +289,7 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
                   ],
 
                   const Center(
-                    child: Text('REVERSAL COMPLETE', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text('Reversal Complete', ),
                   ),
                   const Center(child: Text('CUSTOMER COPY')),
                   const SizedBox(height: 4),

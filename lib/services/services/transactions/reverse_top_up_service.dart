@@ -4,6 +4,7 @@ import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/models/transaction_result.dart';
 import 'package:sahara_app/modules/reverse_top_up_service.dart';
 import 'package:sahara_app/pages/reverse_top_up_page.dart';
+import 'package:sahara_app/widgets/loading_spinner.dart' as NFCBaseService;
 import 'transaction_base_service.dart';
 
 class ReverseTopUpTransactionService extends TransactionBaseService {
@@ -25,7 +26,13 @@ class ReverseTopUpTransactionService extends TransactionBaseService {
     }
 
     try {
+      // Show loading spinner
+      NFCBaseService.showLoadingSpinner(context);
+
       final result = await ReverseTopUpService.reverseTopUp(originalRefNumber: receiptNumber, user: user);
+
+      // Hide loading spinner
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
 
       if (result['success']) {
         final deviceId = await getSavedOrFetchDeviceId();
@@ -64,6 +71,9 @@ class ReverseTopUpTransactionService extends TransactionBaseService {
         return TransactionResult.error(result['error'] ?? 'Failed to reverse top-up');
       }
     } catch (e) {
+      // Hide loading spinner on error
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.grey, duration: Duration(seconds: 3)),
       );

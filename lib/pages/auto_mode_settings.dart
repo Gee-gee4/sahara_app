@@ -53,6 +53,7 @@ class _AutoModeSettingsState extends State<AutoModeSettings> {
       cursorColor: ColorsUniversal.buttonsColor,
       decoration: InputDecoration(
         labelText: labelText,
+        labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
         floatingLabelBehavior: FloatingLabelBehavior.always,
         border: const OutlineInputBorder(),
         enabledBorder: OutlineInputBorder(

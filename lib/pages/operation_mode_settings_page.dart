@@ -52,20 +52,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
     });
   }
 
-  // bool _validateAutoModeSettings() {
-  //   if (_newMode == OperationMode.auto) {
-  //     if (_urlController.text.trim().isEmpty ||
-  //         _stationNameController.text.trim().isEmpty ||
-  //         _fetchingTimeController.text.trim().isEmpty) {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text('Please fill in all auto mode settings'), backgroundColor: Colors.grey));
-  //       return false;
-  //     }
-  //   }
-  //   return true;
-  // }
-
+ 
   Future<void> _handleModeChange() async {
     if (_currentMode == _newMode) {
       // No change, just go back
@@ -73,9 +60,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       return;
     }
 
-    // if (!_validateAutoModeSettings()) {
-    //   return;
-    // }
+    
 
     setState(() => _isLoading = true);
 
@@ -149,8 +134,10 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
 
         TextField(
           controller: _urlController,
+          cursorColor: ColorsUniversal.buttonsColor,
           decoration: InputDecoration(
             labelText: 'URL',
+            labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
             hintText: 'Enter API URL',
             border: OutlineInputBorder(),
             focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
@@ -160,8 +147,10 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
 
         TextField(
           controller: _stationNameController,
+          cursorColor: ColorsUniversal.buttonsColor,
           decoration: InputDecoration(
             labelText: 'Station Name',
+            labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
             hintText: 'Enter station name',
             border: OutlineInputBorder(),
             focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
@@ -171,8 +160,10 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
 
         TextField(
           controller: _fetchingTimeController,
+          cursorColor: ColorsUniversal.buttonsColor,
           decoration: InputDecoration(
             labelText: 'Fetching Time',
+            labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
             hintText: 'Enter time in seconds',
             border: OutlineInputBorder(),
             focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),

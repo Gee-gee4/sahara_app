@@ -29,11 +29,23 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Add operation mode state variable
+  OperationMode _currentOperationMode = OperationMode.manual;
+  
   Future<OperationMode> _getSavedMode() async {
     final prefs = await SharedPreferences.getInstance();
-    final mode = prefs.getString('operationMode') ?? 'manual'; // fixed key
+    final mode = prefs.getString('operationMode') ?? 'manual';
     print("Loaded mode: $mode");
     return mode == 'auto' ? OperationMode.auto : OperationMode.manual;
+  }
+
+  // Initialize operation mode when HomePage loads
+  Future<void> _initializeOperationMode() async {
+    final mode = await _getSavedMode();
+    setState(() {
+      _currentOperationMode = mode;
+    });
+    print("HomePage initialized with operation mode: $mode");
   }
 
   Widget _buildHomeScreen() {
@@ -71,13 +83,13 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.brown[50],
                     child: InkWell(
                       radius: 3,
-                      //splashColor: ColorsUniversal.fillWids,
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () async {
-                        final mode = await _getSavedMode();
-
+                      onTap: () {
+                        // Use the already loaded operation mode instead of calling _getSavedMode() again
+                        print("Category tapped: ${category.productCategoryName}, Current mode: $_currentOperationMode");
+                        
                         // Check if it's automation mode AND the category is FUEL
-                        if (mode == OperationMode.auto && category.productCategoryName.toUpperCase() == 'FUEL') {
+                        if (_currentOperationMode == OperationMode.auto && category.productCategoryName.toUpperCase() == 'FUEL') {
                           // Only FUEL category gets automatic pump fetching in auto mode
                           setState(() {
                             _activeCategoryPage = FuelPage(user: widget.user);
@@ -97,7 +109,6 @@ class _HomePageState extends State<HomePage> {
                           });
                         }
                       },
-
                       child: SizedBox(
                         width: 120,
                         child: Padding(
@@ -133,7 +144,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   final CartStorage cartStorage = CartStorage();
-
   // ignore: unused_field
   ProductListPage? _selectedProductListPage;
   Widget? _activeCategoryPage;
@@ -147,6 +157,10 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadCategoriesFromHive();
     _searchController.addListener(_filterCategories);
+    
+    // Initialize operation mode when HomePage loads
+    _initializeOperationMode();
+    
     cartStorage.addListener(() {
       if (mounted) {
         setState(() {});

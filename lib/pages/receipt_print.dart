@@ -64,6 +64,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
   bool _saleCompleted = false;
   bool _apiCallInProgress = true;
   String? _apiError;
+  bool _isPrinting = false;
 
   @override
   void initState() {
@@ -133,6 +134,13 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
   }
 
   Future<void> _printReceipt() async {
+  if (_isPrinting) return; // Prevent multiple clicks
+  
+  setState(() {
+    _isPrinting = true;
+  });
+
+  try {
     await PrinterHelper.printReceipt(
       context: context,
       user: widget.user,
@@ -155,7 +163,14 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
       apiCallInProgress: _apiCallInProgress,
       apiError: _apiError,
     );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isPrinting = false;
+      });
+    }
   }
+}
 
   // Get client price for a specific product (with fallback to station price)
   double getClientPriceForProduct(CartItem item) {
@@ -187,9 +202,9 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
   String formatStationProductLine(CartItem item) {
     final total = item.price * item.quantity;
     final name = item.productName.padRight(7).substring(0, 7);
-    final price = item.price.toStringAsFixed(0).padLeft(5);
-    final qty = item.quantity;
-    final lineTotal = total.toStringAsFixed(0).padLeft(5);
+    final price = item.price.toStringAsFixed(0).padLeft(4);
+    final qty = item.quantity.toStringAsFixed(2);
+    final lineTotal = total.toStringAsFixed(0).padLeft(6);
     return "$name  $price  $qty  $lineTotal";
   }
 
@@ -309,7 +324,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                   const Divider(),
 
                   // Product listing header
-                  Text('Prod    Price  Qty  Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
+                  Text('Prod    Price  Qty    Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
 
                   // Product lines - different formatting for card vs cash
@@ -397,9 +412,12 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: _printReceipt,
-          backgroundColor: ColorsUniversal.buttonsColor,
-          child: const Icon(Icons.print, color: Colors.white),
+          onPressed: _isPrinting ? null : _printReceipt,
+          backgroundColor:_isPrinting ? Colors.grey : ColorsUniversal.buttonsColor,
+          child: _isPrinting ?CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 3,
+        ) : Icon(Icons.print, color: Colors.white),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),

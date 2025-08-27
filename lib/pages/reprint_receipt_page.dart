@@ -184,14 +184,14 @@ class _ReprintReceiptPageState extends State<ReprintReceiptPage> {
                   const Divider(),
 
                   // Product listing header
-                  Text('Prod    Price  Qty  Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
+                  Text('Prod    Price  Qty   Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
 
                   // Product lines - directly from API data
                   ...ticketLines.map((line) {
                     final name = (line['productVariationName'] ?? '').toString().padRight(7).substring(0, 7);
-                    final price = (line['productVariationPrice'] ?? 0).toStringAsFixed(0).padLeft(5);
-                    final qty = line['units'] ?? 0;
+                    final price = (line['productVariationPrice'] ?? 0).toStringAsFixed(0).padLeft(4);
+                    final qty = (line['units'] ?? 0).toStringAsFixed(2);
                     final total = (line['totalMoneySold'] ?? 0).toStringAsFixed(0).padLeft(5);
                     return Text('$name  $price  $qty  $total', style: receiptStyle);
                   }),

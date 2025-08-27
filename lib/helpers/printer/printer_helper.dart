@@ -3,6 +3,7 @@ import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/helpers/printer/printer_service_telpo.dart';
 import 'package:sahara_app/models/product_card_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
+import 'package:sahara_app/utils/colors_universal.dart';
 import 'unified_printer_helper.dart';
 
 class PrinterHelper {
@@ -31,15 +32,14 @@ class PrinterHelper {
     bool clearCartOnComplete = true,
     bool navigateToHome = true,
   }) async {
-    // Check if sale is incomplete
-    if (saleCompleted != null && !saleCompleted) {
-      final shouldPrint = await _showSaleNotCompletedDialog(
-        context,
-        apiCallInProgress ?? false,
-        apiError,
-      );
+    // Check if sale failed (not just in progress)
+    if (saleCompleted != null && !saleCompleted && apiCallInProgress == false) {
+      final shouldPrint = await _showSaleFailedDialog(context, apiError);
       if (!shouldPrint) return;
     }
+
+    // If sale is still in progress, we assume the button is disabled
+    // and the user is waiting, so we proceed with printing
 
     // Delegate to UnifiedPrinterHelper
     await UnifiedPrinterHelper.printDocument(
@@ -76,37 +76,34 @@ class PrinterHelper {
     }
   }
 
-  /// Dialog shown when sale is not yet completed but user tries to print
-  static Future<bool> _showSaleNotCompletedDialog(
+  /// Dialog shown only when sale has failed (not in progress)
+  static Future<bool> _showSaleFailedDialog(
     BuildContext context,
-    bool apiCallInProgress,
     String? apiError,
   ) async {
     return await showDialog<bool>(
           context: context,
           builder: (ctx) {
             return AlertDialog(
-              title: const Text("Sale Not Completed"),
+              title: const Text("Sale Failed"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(apiCallInProgress
-                      ? "The sale is still processing. Do you want to print anyway?"
-                      : "The sale has not been confirmed."),
+                  const Text("The sale could not be completed."),
                   if (apiError != null) ...[
                     const SizedBox(height: 8),
                     Text("Error: $apiError",
-                        style: const TextStyle(color: Colors.red)),
+                        style: const TextStyle(color: Colors.grey)),
                   ],
                 ],
               ),
               actions: [
                 TextButton(
-                  child: const Text("Cancel"),
+                  child: Text("Cancel", style: TextStyle(color: ColorsUniversal.buttonsColor)),
                   onPressed: () => Navigator.of(ctx).pop(false),
                 ),
                 TextButton(
-                  child: const Text("Print Anyway"),
+                  child: Text("Print Anyway", style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
                   onPressed: () => Navigator.of(ctx).pop(true),
                 ),
               ],

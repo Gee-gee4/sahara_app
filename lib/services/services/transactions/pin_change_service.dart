@@ -43,6 +43,7 @@ class PinChangeService extends TransactionBaseService {
         final confirmPinController = TextEditingController();
 
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('Change Card Pin'),
           content: SingleChildScrollView(
             child: Column(

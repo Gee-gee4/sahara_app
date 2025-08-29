@@ -16,7 +16,9 @@ import 'package:sahara_app/pages/product_list_page.dart';
 import 'package:sahara_app/pages/products_page.dart';
 import 'package:sahara_app/pages/settings_page.dart';
 import 'package:sahara_app/pages/sync_items_page.dart';
+import 'package:sahara_app/pages/tap_card_page.dart';
 import 'package:sahara_app/pages/users_page.dart';
+import 'package:sahara_app/services/services/nfc/nfc_service_factory.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,7 +33,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // Add operation mode state variable
   OperationMode _currentOperationMode = OperationMode.manual;
-  
+
   Future<OperationMode> _getSavedMode() async {
     final prefs = await SharedPreferences.getInstance();
     final mode = prefs.getString('operationMode') ?? 'manual';
@@ -87,9 +89,10 @@ class _HomePageState extends State<HomePage> {
                       onTap: () {
                         // Use the already loaded operation mode instead of calling _getSavedMode() again
                         print("Category tapped: ${category.productCategoryName}, Current mode: $_currentOperationMode");
-                        
+
                         // Check if it's automation mode AND the category is FUEL
-                        if (_currentOperationMode == OperationMode.auto && category.productCategoryName.toUpperCase() == 'FUEL') {
+                        if (_currentOperationMode == OperationMode.auto &&
+                            category.productCategoryName.toUpperCase() == 'FUEL') {
                           // Only FUEL category gets automatic pump fetching in auto mode
                           setState(() {
                             _activeCategoryPage = FuelPage(user: widget.user);
@@ -157,10 +160,10 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadCategoriesFromHive();
     _searchController.addListener(_filterCategories);
-    
+
     // Initialize operation mode when HomePage loads
     _initializeOperationMode();
-    
+
     cartStorage.addListener(() {
       if (mounted) {
         setState(() {});
@@ -204,6 +207,7 @@ class _HomePageState extends State<HomePage> {
     _activeCategoryPage != null ? _activeCategoryPage! : _buildHomeScreen(), // home layout
     ProductsPage(),
     SettingsPage(user: widget.user),
+    Container(),
   ];
 
   @override
@@ -289,6 +293,7 @@ class _HomePageState extends State<HomePage> {
           TabItem(icon: Icons.home, title: 'Home'),
           TabItem(icon: Icons.list_alt, title: 'Products'),
           TabItem(icon: Icons.settings, title: 'Settings'),
+          TabItem(icon: Icons.nfc, title: 'Details'),
         ],
         initialActiveIndex: _selectedIndex,
         onTap: (index) {
@@ -297,6 +302,21 @@ class _HomePageState extends State<HomePage> {
 
             if (index == 0) {
               _activeCategoryPage = null;
+            }
+
+            // Handle NFC tab tap - navigate directly to TapCardPage
+            if (index == 3) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.cardDetails),
+                ),
+              ).then((_) {
+                // After returning from NFC page, reset to home tab
+                setState(() {
+                  _selectedIndex = 0; // Return to home tab
+                });
+              });
             }
           });
         },

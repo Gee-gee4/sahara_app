@@ -249,6 +249,7 @@ class NFCTopUpService extends NFCBaseService {
       builder: (context) {
         final pinController = TextEditingController();
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('Confirm Top-Up'),
           content: Column(
             mainAxisSize: MainAxisSize.min,

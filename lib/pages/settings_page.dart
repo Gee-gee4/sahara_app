@@ -106,6 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Card Formating'),
         content: const Text(
           'Formating will erase all the user data on the card.\n\n'

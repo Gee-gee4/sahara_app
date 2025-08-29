@@ -35,6 +35,7 @@ abstract class NFCBaseService {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
         title: Text(title),
         content: Text(message, style: TextStyle(fontSize: 16)),
         actions: [
@@ -105,6 +106,7 @@ abstract class NFCBaseService {
       builder: (context) {
         final pinController = TextEditingController();
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text(title),
           content: Column(
             mainAxisSize: MainAxisSize.min,

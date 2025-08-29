@@ -40,6 +40,7 @@ class NFCUIDService extends NFCBaseService {
           context: context,
           barrierDismissible: false,
           builder: (BuildContext dialogContext) => AlertDialog(
+            backgroundColor: Colors.white,
             title: const Text("Card Identifier"),
             content: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

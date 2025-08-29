@@ -57,6 +57,7 @@ class _ReverseTopUpPageState extends State<ReverseTopUpPage> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Exit Page'),
         content: const Text(
           'You will lose all progress if you exit from this page',

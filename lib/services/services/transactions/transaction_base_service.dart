@@ -4,8 +4,8 @@ import 'package:sahara_app/utils/colors_universal.dart';
 abstract class TransactionBaseService {
   // Common success dialog
   static Future<void> showSuccessDialog(
-    BuildContext context, 
-    String title, 
+    BuildContext context,
+    String title,
     String message, {
     Map<String, dynamic>? details,
   }) async {
@@ -13,6 +13,7 @@ abstract class TransactionBaseService {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.green, size: 28),
@@ -28,14 +29,9 @@ abstract class TransactionBaseService {
                 SizedBox(height: 16),
                 Container(
                   padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100], 
-                    borderRadius: BorderRadius.circular(8)
-                  ),
+                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
                   child: Column(
-                    children: details.entries.map((entry) => 
-                      _infoRow(entry.key, entry.value.toString())
-                    ).toList(),
+                    children: details.entries.map((entry) => _infoRow(entry.key, entry.value.toString())).toList(),
                   ),
                 ),
               ],
@@ -62,39 +58,38 @@ abstract class TransactionBaseService {
     String cancelText = 'Cancel',
   }) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon(Icons.warning, color: Colors.orange, size: 48),
-              // SizedBox(height: 16),
-              Text(message),
-              SizedBox(height: 16),
-              Text(
-                'This action cannot be undone.', 
-                style: TextStyle(color: ColorsUniversal.appBarColor, fontSize: 12,fontStyle: FontStyle.italic)
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon(Icons.warning, color: Colors.orange, size: 48),
+                  // SizedBox(height: 16),
+                  Text(message),
+                  SizedBox(height: 16),
+                  Text(
+                    'This action cannot be undone.',
+                    style: TextStyle(color: ColorsUniversal.appBarColor, fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(cancelText, style: TextStyle(color: ColorsUniversal.buttonsColor)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(
-                confirmText,
-                style: TextStyle(color: ColorsUniversal.buttonsColor,fontSize: 18),
-              ),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(cancelText, style: TextStyle(color: ColorsUniversal.buttonsColor)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(confirmText, style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 18)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   // Common input dialog - FIXED: Removed dead code
@@ -117,6 +112,7 @@ abstract class TransactionBaseService {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
+              backgroundColor: Colors.white,
               title: Text(title),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -133,9 +129,7 @@ abstract class TransactionBaseService {
                       hintText: hintText,
                       errorText: errorMessage,
                       border: OutlineInputBorder(),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: ColorsUniversal.buttonsColor)
-                      ),
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
                     ),
                   ),
                 ],
@@ -148,7 +142,7 @@ abstract class TransactionBaseService {
                 TextButton(
                   onPressed: () {
                     final input = controller.text.trim();
-                    
+
                     if (validator != null) {
                       final error = validator(input);
                       if (error != null) {
@@ -156,7 +150,7 @@ abstract class TransactionBaseService {
                         return;
                       }
                     }
-                    
+
                     Navigator.of(context).pop(input);
                   },
                   child: Text('SUBMIT', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),

@@ -92,6 +92,7 @@ class _ResourcePageState extends State<ResourcePage> {
                       showDialog(
                         context: context,
                         builder: (_) => AlertDialog(
+                          backgroundColor: Colors.white,
                           title: const Text('Error'),
                           content: const Text(
                             'Could not fetch configuration for that resource.',

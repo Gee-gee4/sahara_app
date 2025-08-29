@@ -26,16 +26,29 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
   final TextEditingController _stationNameController = TextEditingController();
   final TextEditingController _fetchingTimeController = TextEditingController();
 
+  // Original values to track changes
+  String _originalUrl = '';
+  String _originalStationName = '';
+  String _originalFetchingTime = '';
+
   @override
   void initState() {
     super.initState();
     _loadCurrentMode();
     _loadAutoModeSettings();
+    
+    // Add listeners to text controllers
+    _urlController.addListener(_onTextFieldChanged);
+    _stationNameController.addListener(_onTextFieldChanged);
+    _fetchingTimeController.addListener(_onTextFieldChanged);
+  }
+
+  void _onTextFieldChanged() {
+    setState(() {}); // Trigger rebuild to update button state
   }
 
   Future<void> _loadCurrentMode() async {
     final prefs = await SharedPreferences.getInstance();
-    // Use the correct key from SharedPrefsHelper
     final modeString = prefs.getString('operationMode') ?? 'manual';
     setState(() {
       _currentMode = modeString == 'auto' ? OperationMode.auto : OperationMode.manual;
@@ -46,79 +59,106 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
   Future<void> _loadAutoModeSettings() async {
     final settings = await PosSettingsHelper.loadSettings();
     setState(() {
-      _urlController.text = settings['url'] ?? '';
-      _stationNameController.text = settings['stationName'] ?? '';
-      _fetchingTimeController.text = settings['fetchingTime'] ?? '';
+      _originalUrl = settings['url'] ?? '';
+      _originalStationName = settings['stationName'] ?? '';
+      _originalFetchingTime = settings['fetchingTime'] ?? '';
+      
+      _urlController.text = _originalUrl;
+      _stationNameController.text = _originalStationName;
+      _fetchingTimeController.text = _originalFetchingTime;
     });
   }
 
- 
-  Future<void> _handleModeChange() async {
-    if (_currentMode == _newMode) {
-      // No change, just go back
+  bool get _hasModeChanged => _currentMode != _newMode;
+  
+  bool get _hasSettingsChanged =>
+      _urlController.text.trim() != _originalUrl ||
+      _stationNameController.text.trim() != _originalStationName ||
+      _fetchingTimeController.text.trim() != _originalFetchingTime;
+
+  bool get _hasAnyChanges => _hasModeChanged || _hasSettingsChanged;
+
+  String get _buttonText {
+    if (!_hasAnyChanges) return 'BACK';
+    if (_hasModeChanged) return 'APPLY MODE CHANGE';
+    return 'SAVE SETTINGS';
+  }
+
+  Future<void> _handleSave() async {
+    if (!_hasAnyChanges) {
       Navigator.pop(context);
       return;
     }
 
-    
-
     setState(() => _isLoading = true);
 
     try {
-      if (_newMode == OperationMode.auto) {
-        // Switching to auto - save settings and trigger full sync
+      // Always save the settings if they changed
+      if (_hasSettingsChanged || _newMode == OperationMode.auto) {
         await PosSettingsHelper.saveSettings(
           url: _urlController.text.trim(),
           stationName: _stationNameController.text.trim(),
           fetchingTime: _fetchingTimeController.text.trim(),
         );
-
-        // Save the mode
-        await SharedPrefsHelper.savePosSettings(
-          mode: 'auto',
-          receiptCount: 1, // Keep existing receipt count
-          printPolicies: false, // Keep existing print policies
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully switched to Auto mode'),
-            backgroundColor: hexToColor('8f9c68'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        // Switching to manual - save mode and trigger re-sync
-        await SharedPrefsHelper.savePosSettings(
-          mode: 'manual',
-          receiptCount: 1, // Keep existing receipt count
-          printPolicies: false, // Keep existing print policies
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully switched to Manual mode'),
-            backgroundColor: hexToColor('8f9c68'),
-            duration: Duration(seconds: 2),
-          ),
-        );
       }
 
-      // Wait a moment for the snackbar to show
-      await Future.delayed(Duration(milliseconds: 500));
-
-      // Navigate to UsersPage (logout) and clear the entire navigation stack
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => UsersPage()),
-          (route) => false, // Remove all previous routes
+      if (_hasModeChanged) {
+        // Mode changed - save mode and logout
+        await SharedPrefsHelper.savePosSettings(
+          mode: _newMode == OperationMode.auto ? 'auto' : 'manual',
+          receiptCount: 1,
+          printPolicies: false,
         );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully switched to ${_newMode == OperationMode.auto ? 'Auto' : 'Manual'} mode'),
+            backgroundColor: hexToColor('8f9c68'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Wait a moment for the snackbar to show
+        await Future.delayed(Duration(milliseconds: 500));
+
+        // Navigate to UsersPage (logout) and clear the entire navigation stack
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => UsersPage()),
+            (route) => false,
+          );
+        }
+      } else {
+        // Only settings changed - save without logout
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Settings saved successfully'),
+            backgroundColor: hexToColor('8f9c68'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Update original values to reflect saved state
+        setState(() {
+          _originalUrl = _urlController.text.trim();
+          _originalStationName = _stationNameController.text.trim();
+          _originalFetchingTime = _fetchingTimeController.text.trim();
+        });
+
+        // Wait a moment for the snackbar to show, then go back
+        await Future.delayed(Duration(milliseconds: 1500));
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save settings'), backgroundColor: Colors.grey));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save settings'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -220,10 +260,11 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
 
-                    // Show auto mode settings when auto is selected
-                    if (_newMode == OperationMode.auto) _buildAutoModeSettings(),
+                    // Show auto mode settings when auto is selected OR when current mode is auto
+                    if (_newMode == OperationMode.auto || _currentMode == OperationMode.auto) 
+                      _buildAutoModeSettings(),
 
-                    if (_newMode != _currentMode) ...[
+                    if (_hasAnyChanges) ...[
                       SizedBox(height: 16),
                       Container(
                         padding: EdgeInsets.all(12),
@@ -238,7 +279,9 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Changing operation mode may require syncing items for optimal performance.',
+                                _hasModeChanged 
+                                  ? 'Changing operation mode will require you to log in again for optimal performance.'
+                                  : 'Settings changes will be saved and applied immediately.',
                                 style: TextStyle(color: ColorsUniversal.buttonsColor),
                               ),
                             ),
@@ -262,7 +305,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                   elevation: 1,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                 ),
-                onPressed: _isLoading ? null : _handleModeChange,
+                onPressed: _isLoading ? null : _handleSave,
                 child: _isLoading
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
@@ -280,7 +323,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                           Text('Saving...', style: TextStyle(color: Colors.white)),
                         ],
                       )
-                    : Text(_currentMode == _newMode ? 'BACK' : 'APPLY CHANGES', style: TextStyle(color: Colors.white)),
+                    : Text(_buttonText, style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
@@ -291,6 +334,10 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
 
   @override
   void dispose() {
+    _urlController.removeListener(_onTextFieldChanged);
+    _stationNameController.removeListener(_onTextFieldChanged);
+    _fetchingTimeController.removeListener(_onTextFieldChanged);
+    
     _urlController.dispose();
     _stationNameController.dispose();
     _fetchingTimeController.dispose();

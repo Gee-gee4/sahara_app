@@ -387,10 +387,7 @@ class _CartPageState extends State<CartPage> {
     final cartItems = CartStorage().cartItems;
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'My Cart ${currentMode == OperationMode.auto ? "" : ""}',
-          style: TextStyle(color: Colors.white70),
-        ),
+        title: Text('My Cart ${currentMode == OperationMode.auto ? "" : ""}', style: TextStyle(color: Colors.white70)),
         centerTitle: true,
         backgroundColor: ColorsUniversal.appBarColor,
         iconTheme: IconThemeData(color: Colors.white70),
@@ -555,6 +552,7 @@ class _CartPageState extends State<CartPage> {
                     context: context,
                     barrierDismissible: false,
                     builder: (context) => AlertDialog(
+                      backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       title: Text('Tap Card', style: TextStyle(fontSize: 22)),
                       content: Text('Do you have a card?', style: TextStyle(fontSize: 20)),

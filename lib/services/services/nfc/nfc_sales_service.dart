@@ -490,6 +490,7 @@ class NFCSalesService extends NFCBaseService {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: Text("Insufficient Balance"),
         content: SingleChildScrollView(
           child: Column(
@@ -540,6 +541,7 @@ class NFCSalesService extends NFCBaseService {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('Select Equipment'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -637,6 +639,7 @@ class NFCSalesService extends NFCBaseService {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('Card Payment'),
           content: Column(
             mainAxisSize: MainAxisSize.min,

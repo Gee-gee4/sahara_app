@@ -57,7 +57,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Sahara App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown)
       ),
       debugShowCheckedModeBanner: false,
       home: startOnUsersPage ? const UsersPage() : const ResourcePage(),

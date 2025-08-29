@@ -159,6 +159,7 @@ class _CloudSettingsState extends State<CloudSettings> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Error'),
         content: Text(msg, style: TextStyle(fontSize: 16)),
         actions: [

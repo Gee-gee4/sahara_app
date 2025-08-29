@@ -247,6 +247,7 @@ class _NfcCardInitState extends State<NfcCardInit> {
         builder: (context) {
           final controller = TextEditingController();
           return AlertDialog(
+            backgroundColor: Colors.white,
             title: const Text('Set Your PIN'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -381,6 +382,7 @@ class _NfcCardInitState extends State<NfcCardInit> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('⚠️ Format Card'),
           content: const Text(
             'This will completely erase all data on the card and reset it to factory defaults.\n\n'
@@ -496,6 +498,7 @@ class _NfcCardInitState extends State<NfcCardInit> {
         final confirmPinController = TextEditingController();
 
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('🔐 Change Card PIN'),
           content: SingleChildScrollView(
             child: Column(
@@ -811,6 +814,7 @@ class _NfcCardInitState extends State<NfcCardInit> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
+                      backgroundColor: Colors.white,
                       title: const Text('Card UID'),
                       content: Text(uid),
                       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],

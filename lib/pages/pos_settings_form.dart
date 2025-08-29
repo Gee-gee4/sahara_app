@@ -323,6 +323,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                           showDialog(
                             context: rootContext,
                             builder: (_) => AlertDialog(
+                              backgroundColor: Colors.white,
                               title: const Text('Validation Failed'),
                               content: Text(
                                 'This device is not registered.\nDevice ID: $deviceId',

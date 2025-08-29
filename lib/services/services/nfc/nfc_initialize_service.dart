@@ -120,6 +120,7 @@ class NFCInitializeService extends NFCBaseService {
         builder: (BuildContext dialogContext) {
           final controller = TextEditingController();
           return AlertDialog(
+            backgroundColor: Colors.white,
             title: const Text('Set Pin'),
             content: Column(
               mainAxisSize: MainAxisSize.min,

@@ -85,6 +85,7 @@ class PrinterHelper {
           context: context,
           builder: (ctx) {
             return AlertDialog(
+              backgroundColor: Colors.white,
               title: const Text("Sale Failed"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,

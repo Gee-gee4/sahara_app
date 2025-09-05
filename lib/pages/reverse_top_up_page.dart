@@ -46,7 +46,7 @@ class _ReverseTopUpPageState extends State<ReverseTopUpPage> {
       topUpData: widget.topUpData,
       accountNo: widget.accountNo,
       staffName: widget.staff.staffName,
-      isReversal: true, // This is the key difference
+      isReversal: true,
       companyName: widget.companyName,
       channelName: widget.channelName,
     );

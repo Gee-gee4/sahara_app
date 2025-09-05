@@ -50,14 +50,14 @@ class _LoginPageState extends State<LoginPage> {
             myButton(context, () {
               final enteredPin = _pinController.text.trim();
 
-              // ✅ Get stored staff list from Hive
+              // Get stored staff list from Hive
               final box = Hive.box('staff_list');
               final storedList = box.get('staffList', defaultValue: []) as List;
               final List<StaffListModel> staffList = storedList
                   .map((e) => StaffListModel.fromJson(Map<String, dynamic>.from(e)))
                   .toList();
 
-              // ✅ Find the staff by username and validate pin
+              // Find the staff by username and validate pin
               final matchedUser = staffList.firstWhere(
                 (staff) => staff.staffName == widget.username && staff.staffPin == enteredPin,
                 orElse: () => StaffListModel(

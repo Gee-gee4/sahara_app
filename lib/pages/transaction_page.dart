@@ -28,7 +28,7 @@ class _TransactionPageState extends State<TransactionPage> {
   @override
   void initState() {
     super.initState();
-    // ✅ Add this - automatically fetch transactions when page loads
+    // automatically fetch transactions when page loads
     fetchAndSetTransactions();
 
       // Listener for cart changes
@@ -87,7 +87,7 @@ class _TransactionPageState extends State<TransactionPage> {
         iconTheme: IconThemeData(color: Colors.white70),
         backgroundColor: ColorsUniversal.appBarColor,
         actions: [
-          // ✅ Nozzle filter dropdown in AppBar
+          // Nozzle filter dropdown in AppBar
           if (nozzles.length > 1)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -111,7 +111,7 @@ class _TransactionPageState extends State<TransactionPage> {
               ),
             ),
 
-          // ✅ Refresh button after dropdown
+          // Refresh button after dropdown
           IconButton(
             onPressed: fetchAndSetTransactions,
             icon: Icon(Icons.refresh, color: Colors.white70),
@@ -290,7 +290,6 @@ class _TransactionPageState extends State<TransactionPage> {
         ),
       ),
 
-      // Position the FAB properly
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }

@@ -188,7 +188,7 @@ class _ReprintReceiptPageState extends State<ReprintReceiptPage> {
                   Text('Prod    Price  Qty   Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
 
-                  // Product lines - directly from API data
+                  // Product lines  directly from API data
                   ...ticketLines.map((line) {
                     final name = (line['productVariationName'] ?? '').toString().padRight(7).substring(0, 7);
                     final price = (line['productVariationPrice'] ?? 0).toStringAsFixed(0).padLeft(4);

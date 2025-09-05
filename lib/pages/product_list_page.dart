@@ -5,8 +5,6 @@ import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 
-//from the title category
-
 class ProductListPage extends StatefulWidget {
   final String categoryName;
   final List<ProductModel> products;
@@ -185,9 +183,6 @@ class _ProductListPageState extends State<ProductListPage> {
                                               style: TextStyle(color: ColorsUniversal.buttonsColor),
                                             ),
                                           ),
-
-                                          // Updated ProductListPage - fix the addToCart call
-                                          // Replace your addToCart call with this:
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: ColorsUniversal.buttonsColor,
@@ -202,7 +197,6 @@ class _ProductListPageState extends State<ProductListPage> {
                                                   ? input / pricePerUnit
                                                   : input;
 
-                                              // FIXED: Include productId and correct parameter order
                                               CartStorage().addToCart(
                                                 variation.productVariationId, // productId (int)
                                                 product.productName, // name (String)

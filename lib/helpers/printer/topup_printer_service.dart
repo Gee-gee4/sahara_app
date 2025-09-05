@@ -40,7 +40,7 @@ class TopUpPrinterService {
     );
     sheet.addElement(
       PrintData.text(
-        channelName ?? 'CMB Station', 
+        channelName ?? 'Station', 
         alignment: PrintAlignment.center, 
         fontSize: PrintedFontSize.size24
       ),

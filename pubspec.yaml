@@ -42,7 +42,6 @@ dependencies:
   path_provider: ^2.1.5 
   flutter_spinkit: ^5.2.1
   flutter_nfc_kit: ^3.6.0 
-  connectivity_plus: ^6.1.4
   flutter_udid: ^4.0.0
   telpo_flutter_sdk: ^0.1.1
   pretty_qr_code: ^3.5.0

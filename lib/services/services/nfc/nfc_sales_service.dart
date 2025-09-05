@@ -359,7 +359,7 @@ class NFCSalesService extends NFCBaseService {
 
                     final prefs = await SharedPreferences.getInstance();
                     final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
-                    final channelName = prefs.getString('channelName') ?? 'CMB Station';
+                    final channelName = prefs.getString('channelName') ?? 'Station';
                     final refNumber = await RefGenerator.generate();
                     final deviceId = await getSavedOrFetchDeviceId();
 

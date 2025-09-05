@@ -80,7 +80,6 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
     final TextStyle reversalStyle = const TextStyle(
       fontFamily: 'Courier',
       fontSize: 14,
-      // color: Colors.red,
       fontWeight: FontWeight.bold,
     );
 
@@ -186,21 +185,6 @@ class _ReverseSalePageState extends State<ReverseSalePage> {
                   Text('REF# ${widget.reversalRefNumber}', style: receiptStyle),
                   const Divider(),
 
-                  // Reversal notice
-                  // Center(
-                  //   child: Container(
-                  //     padding: const EdgeInsets.all(8),
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.red[50],
-                  //       border: Border.all(color: Colors.red),
-                  //       borderRadius: BorderRadius.circular(4),
-                  //     ),
-                  //     child: const Text(
-                  //       'TRANSACTION REVERSED',
-                  //       style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
-                  //     ),
-                  //   ),
-                  // ),
                   const SizedBox(height: 12),
 
                   // Product listing header

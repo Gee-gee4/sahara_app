@@ -1,6 +1,5 @@
 // lib/helpers/printing/unified_printer_helper.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/home_page.dart';
@@ -18,7 +17,7 @@ class UnifiedPrinterHelper {
     int? customDelayMs,
     bool navigateToHome = true,
     String? successMessage,
-    bool ignoreReceiptCount = false, // NEW FLAG
+    bool ignoreReceiptCount = false,
   }) async {
     // Check printer status before starting
     final printerReady = await _checkPrinterStatus(context);
@@ -38,12 +37,14 @@ class UnifiedPrinterHelper {
       final result = await printFunction();
 
       if (result != PrintResult.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("${documentType.capitalize()} ${i + 1} failed to print: ${_getPrintResultMessage(result)}"),
-            backgroundColor: Colors.grey,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("${documentType.capitalize()} ${i + 1} failed to print: ${_getPrintResultMessage(result)}"),
+              backgroundColor: Colors.grey,
+            ),
+          );
+        }
         return;
       }
 
@@ -56,22 +57,24 @@ class UnifiedPrinterHelper {
       }
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(successMessage ?? 'All ${documentType.toLowerCase()}s printed successfully!'),
-        backgroundColor: _getSuccessColor(),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    await Future.delayed(Duration(seconds: 2));
-
-    if (navigateToHome && context.mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage(user: user)),
-        (route) => false,
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(successMessage ?? 'All ${documentType.toLowerCase()}s printed successfully!'),
+          backgroundColor: _getSuccessColor(),
+          duration: Duration(seconds: 2),
+        ),
       );
+
+      await Future.delayed(Duration(seconds: 2));
+
+      if (navigateToHome) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage(user: user)),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -79,14 +82,14 @@ class UnifiedPrinterHelper {
   static int _getDefaultDelayForDocumentType(String documentType) {
     switch (documentType.toLowerCase()) {
       case 'carddetails':
-        return 3000; // Longer delay for detailed documents
+        return 3000;
       case 'ministatement':
-        return 2500; // Slightly longer for statements
+        return 2500;
       case 'reprint':
       case 'reversal':
       case 'topup':
       default:
-        return 2000; // Default delay for receipts
+        return 2000;
     }
   }
 
@@ -160,8 +163,13 @@ class UnifiedPrinterHelper {
     }
   }
 
-  // Shared printer error dialog
-  static Future<void> _showPrinterErrorDialog(BuildContext context, String title, String message, IconData icon) async {
+  // Simplified printer error dialog - OK button only
+  static Future<void> _showPrinterErrorDialog(
+    BuildContext context, 
+    String title, 
+    String message, 
+    IconData icon
+  ) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -187,42 +195,6 @@ class UnifiedPrinterHelper {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'OK',
-                style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-
-                // Show loading spinner during retry
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => Center(
-                    child: SpinKitCircle(
-                      size: 70,
-                      duration: Duration(milliseconds: 1000),
-                      itemBuilder: (context, index) {
-                        final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
-                        return DecoratedBox(
-                          decoration: BoxDecoration(color: colors[index % colors.length], shape: BoxShape.circle),
-                        );
-                      },
-                    ),
-                  ),
-                );
-
-                await Future.delayed(Duration(milliseconds: 800));
-
-                // ignore: unused_local_variable
-                final printerReady = await _checkPrinterStatus(context);
-
-                if (context.mounted) {
-                  Navigator.of(context).pop(); // Close spinner
-                }
-              },
-              child: Text(
-                'Retry',
                 style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ),
@@ -286,6 +258,7 @@ class UnifiedPrinterHelper {
 // Extension for string capitalization
 extension StringExtension on String {
   String capitalize() {
+    if (isEmpty) return this;
     return "${this[0].toUpperCase()}${this.substring(1).toLowerCase()}";
   }
 }

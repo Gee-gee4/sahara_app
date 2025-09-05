@@ -328,7 +328,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                   Text('Prod    Price  Qty    Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
 
-                  // Product lines - different formatting for card vs cash
+                  // Product lines 
                   if (isCardSale) ...[
                     // CARD SALE: Show client pricing
                     ...widget.cartItems.map((item) => Text(formatClientProductLine(item), style: receiptStyle)),
@@ -396,7 +396,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                   const Center(child: Text('Powered by Sahara FCS', style: TextStyle(fontSize: 11))),
                   SizedBox(height: 10),
                   
-                  // QR Code (only on screen, not printed)
+                  // QR Code
                   Center(
                     child: SizedBox(
                       width: 100,

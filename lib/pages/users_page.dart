@@ -61,7 +61,14 @@ class _UsersPageState extends State<UsersPage> {
     try {
       // Fetch from API
       final deviceId = await getSavedOrFetchDeviceId();
-      final newStaffList = await StaffListService.fetchStaffList(deviceId);
+      final newStaffListRes = await StaffListService.fetchStaffList(deviceId);
+
+      if(!newStaffListRes.isSuccessfull){
+        showDialog(context: context, builder: (_)=> Dialog(child: Text(newStaffListRes.message),));
+        return;
+      }
+      final newStaffList = newStaffListRes.body;
+
 
       // Save to Hive
       final box = Hive.box('staff_list');

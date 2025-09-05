@@ -14,8 +14,9 @@ Future<void> fullResourceSync({
   final prefs = await SharedPreferences.getInstance();
 
   // Channel
-  final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
-  if (channel != null) {
+  final channelResponse = await ChannelService.fetchChannelByDeviceId(deviceId);
+  if (channelResponse.isSuccessfull && channelResponse.body != null) {
+    final channel = channelResponse.body!;
     await prefs.setString('channelName', channel.channelName);
     await prefs.setString('companyName', channel.companyName);
     await prefs.setBool('staffAutoLogOff', channel.staffAutoLogOff);
@@ -36,7 +37,7 @@ Future<void> fullResourceSync({
   // Staff
   final staffList = await StaffListService.fetchStaffList(deviceId);
   final staffBox = Hive.box('staff_list');
-  await staffBox.put('staffList', staffList.map((e) => e.toJson()).toList());
+  await staffBox.put('staffList', staffList.body.map((e) => e.toJson()).toList());
 
   // Products
   final products = await ProductService.fetchProductItems(deviceId);

@@ -68,7 +68,7 @@ class PrinterServiceTelpo {
       PrintData.text(companyName ?? 'SAHARA FCS', alignment: PrintAlignment.center, fontSize: PrintedFontSize.size24),
     );
     sheet.addElement(
-      PrintData.text(channelName ?? 'CMB Station', alignment: PrintAlignment.center, fontSize: PrintedFontSize.size24),
+      PrintData.text(channelName ?? 'Station', alignment: PrintAlignment.center, fontSize: PrintedFontSize.size24),
     );
     sheet.addElement(PrintData.space(line: 4));
     sheet.addElement(PrintData.text('SALE', alignment: PrintAlignment.center, fontSize: PrintedFontSize.size24));

@@ -23,8 +23,6 @@ class SyncItemsPage extends StatefulWidget {
 }
 
 class _SyncItemsPageState extends State<SyncItemsPage> {
-  // final deviceId = '044ba7ee5cdd86c5';
-  //'044ba7ee5cdd86c5'
 
   final List<_SyncItem> syncItems = [
     _SyncItem(label: 'Channel', icon: Icons.device_hub, syncMethod: 'channel'),
@@ -64,8 +62,9 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
 
       switch (method) {
         case 'channel':
-          final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
-          if (channel != null) {
+          final channelResponse = await ChannelService.fetchChannelByDeviceId(deviceId);
+          if (channelResponse.isSuccessfull && channelResponse.body != null) {
+            final channel = channelResponse.body!;
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('channelName', channel.channelName);
             await prefs.setString('companyName', channel.companyName);
@@ -84,7 +83,12 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
           break;
 
         case 'staff':
-          final newStaffList = await StaffListService.fetchStaffList(deviceId);
+          final newStaffListRes = await StaffListService.fetchStaffList(deviceId);
+          if(!newStaffListRes.isSuccessfull){
+            showDialog(context: context, builder: (_)=> Dialog(child: Text(newStaffListRes.message),));
+            return;
+          }
+          final newStaffList = newStaffListRes.body;
           final staffBox = Hive.box('staff_list');
           final staffAsMaps = newStaffList.map((e) => e.toJson()).toList();
           await staffBox.put('staffList', staffAsMaps);

@@ -115,7 +115,7 @@ class _CardDetailsPageState extends State<CardDetailsPage> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  Center(child: Text(widget.channelName ?? 'CMB Station')),
+                  Center(child: Text(widget.channelName ?? 'Station')),
                   const SizedBox(height: 15),
                   const Center(
                     child: Text('CARD DETAILS', style: TextStyle(decoration: TextDecoration.underline)),

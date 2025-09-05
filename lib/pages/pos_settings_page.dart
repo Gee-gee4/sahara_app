@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
-// We'll create this for getDeviceId()
 
 class PosSettingsPage extends StatelessWidget {
   const PosSettingsPage({super.key});
@@ -16,7 +15,7 @@ class PosSettingsPage extends StatelessWidget {
       appBar: myAppBar('POS Settings'),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: PosSettingsForm(showSyncButton: true), // ⬅ Only save locally
+        child: PosSettingsForm(showSyncButton: true), //Only save locally
       ),
     );
   }

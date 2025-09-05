@@ -8,7 +8,7 @@ import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sahara_app/helpers/sync_helper.dart'; // Import your sync helper
+import 'package:sahara_app/helpers/sync_helper.dart';
 
 class CloudSettings extends StatefulWidget {
   const CloudSettings({super.key});
@@ -45,15 +45,9 @@ class _CloudSettingsState extends State<CloudSettings> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'This device ID is not linked to the station you input.',
-              style: TextStyle(fontSize: 16),
-            ),
+            const Text('This device ID is not linked to the station you input.', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 12),
-            const Text(
-              'Device ID:',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
+            const Text('Device ID:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Container(
               width: double.infinity,
@@ -65,11 +59,7 @@ class _CloudSettingsState extends State<CloudSettings> {
               ),
               child: Text(
                 deviceId,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontFamily: 'monospace',
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.black87),
               ),
             ),
             const SizedBox(height: 12),
@@ -83,15 +73,9 @@ class _CloudSettingsState extends State<CloudSettings> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop(); // close dialog
-              Navigator.of(context).pop(); // close CloudSettings page
+              Navigator.of(context).pop(); // close page
             },
-            child: Text(
-              'OK',
-              style: TextStyle(
-                fontSize: 16,
-                color: ColorsUniversal.buttonsColor,
-              ),
-            ),
+            child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
           ),
         ],
       ),
@@ -112,39 +96,40 @@ class _CloudSettingsState extends State<CloudSettings> {
 
     setState(() => isSyncing = true);
 
-    final resourceSynced = await ResourceService.fetchAndSaveConfig(
-      resourceName,
-    );
+    final resourceSynced = await ResourceService.fetchAndSaveConfig(resourceName);
 
     if (!mounted) return;
 
-    if (resourceSynced) {
+    if (resourceSynced.isSuccessfull) {
       try {
         final deviceId = await getSavedOrFetchDeviceId();
         print('📱 Device ID used for sync: $deviceId');
 
-        // ⬇️ Check channel BEFORE full sync
-        final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
+        //checks channel b4 full sync
+        final channelResponse = await ChannelService.fetchChannelByDeviceId(deviceId);
 
-        // 🚨 If channelId is 0 or name is null, assume not linked
-        if (channel == null ||
-            channel.channelId == 0 ||
-            channel.channelName.isEmpty) {
-          _urlController.text =
-              originalUrl ?? ''; // revert to previous valid URL
+        // Check if the channel fetch was successful first
+        if (!channelResponse.isSuccessfull) {
+          _showError('Failed to fetch channel: ${channelResponse.message}');
+          setState(() => isSyncing = false);
+          return;
+        }
+        
+        final channel = channelResponse.body;
+
+        // If channelId is 0 or name is null, assume not linked
+        if (channel == null || channel.channelId == 0 || channel.channelName.isEmpty) {
+          _urlController.text = originalUrl ?? ''; // revert to previous valid URL
           await _showDeviceNotLinkedDialog(deviceId);
           setState(() => isSyncing = false);
           return;
         }
 
-        // ✅ Continue full sync
+        // Continue full sync
         await fullResourceSync(deviceId: deviceId, context: context);
 
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const UsersPage()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UsersPage()));
       } catch (e) {
         _showError('Failed to sync all resources.\n${e.toString()}');
       }
@@ -164,13 +149,7 @@ class _CloudSettingsState extends State<CloudSettings> {
         content: Text(msg, style: TextStyle(fontSize: 16)),
         actions: [
           TextButton(
-            child: Text(
-              'OK',
-              style: TextStyle(
-                fontSize: 16,
-                color: ColorsUniversal.buttonsColor,
-              ),
-            ),
+            child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -192,15 +171,10 @@ class _CloudSettingsState extends State<CloudSettings> {
                 labelText: 'API URL',
                 labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
                 border: OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: ColorsUniversal.buttonsColor),
-                ),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: ColorsUniversal.buttonsColor,
-                    width: 2,
-                  ), // selected border
+                  borderSide: BorderSide(color: ColorsUniversal.buttonsColor, width: 2),
                 ),
               ),
               cursorColor: ColorsUniversal.buttonsColor,

@@ -38,8 +38,8 @@ class SaleService {
   }) async {
     try {
       // Determine if we have card data (regardless of payment method)
-      final hasCardData = customerUID != null && customerUID.isNotEmpty && 
-                         customerAccountNo != null && customerAccountNo != 0;
+      final hasCardData =
+          customerUID != null && customerUID.isNotEmpty && customerAccountNo != null && customerAccountNo != 0;
 
       print("🎯 Sale analysis:");
       print("📋 Payment Type: ${isCardSale ? "CARD" : "CASH"}");
@@ -97,11 +97,11 @@ class SaleService {
       // Calculate total amount and total discount using appropriate pricing
       double totalAmount = 0;
       double totalDiscount = 0;
-      
+
       for (var item in cartItems) {
         final price = getClientPrice(item);
         final discount = getDiscount(item);
-        
+
         totalAmount += price * item.quantity;
         totalDiscount += discount * item.quantity;
       }
@@ -115,25 +115,29 @@ class SaleService {
       final deviceId = await getSavedOrFetchDeviceId();
       final saleData = {
         "terminalName": deviceId,
-        "accountNo": hasCardData ? customerAccountNo : 0, 
+        "accountNo": hasCardData ? customerAccountNo : 0,
         "cardUID": hasCardData ? customerUID : "",
-        "staffId": user.staffId, 
+        "staffId": user.staffId,
         "customerVehicleId": 0,
         "driverId": 0,
         "driverCode": "",
         "reference": refNumber,
         "automationReferenceId": "",
         "odometerReading": 0,
-        "transactionCode": refNumber, 
+        "transactionCode": refNumber,
         "transactionDate": DateTime.now().toIso8601String(), // Current timestamp
-        "ticketLines": cartItems.map((item) => {
-          "productVariationId": item.productId,
-          "productVariationName": item.productName,
-          "productVariationPrice": getClientPrice(item), // Use client price
-          "units": item.quantity,
-          "totalMoneySold": getClientPrice(item) * item.quantity, // Use client price for total
-          "productVariationDiscount": getDiscount(item) * item.quantity // Apply discount
-        }).toList(),
+        "ticketLines": cartItems
+            .map(
+              (item) => {
+                "productVariationId": item.productId,
+                "productVariationName": item.productName,
+                "productVariationPrice": getClientPrice(item), // Use client price
+                "units": item.quantity,
+                "totalMoneySold": getClientPrice(item) * item.quantity, // Use client price for total
+                "productVariationDiscount": getDiscount(item) * item.quantity, // Apply discount
+              },
+            )
+            .toList(),
         "paymentList": [
           {
             // Use the actual payment mode passed from the UI
@@ -142,10 +146,10 @@ class SaleService {
             "totalPaid": isCardSale ? netTotal : (cashGiven ?? totalAmount), // Use NET TOTAL for card sales
             "totalUsed": isCardSale ? netTotal : totalAmount, // Use NET TOTAL for card sales
             "mpesaCode": "", // Only used for M-Pesa payments
-            "mpesaMSISDN": "" // Only used for M-Pesa payments
-          }
+            "mpesaMSISDN": "", // Only used for M-Pesa payments
+          },
         ],
-        "isOnline": true
+        "isOnline": true,
       };
 
       print('🚀 Sending sale data to API:');
@@ -156,6 +160,12 @@ class SaleService {
       print('🏪 Terminal: ${saleData["terminalName"]}');
       print('👤 Staff ID: ${saleData["staffId"]}');
       print('📄 Full JSON: ${jsonEncode(saleData)}');
+
+      final endpoint = '$baseUrl/SellComplete';
+print('🛒 Completing sale...');
+print('🌐 URL: $endpoint');
+print('📦 Payload: ${jsonEncode(saleData)}');
+
 
       final response = await http.post(
         Uri.parse('$baseUrl/SellComplete'),
@@ -174,24 +184,14 @@ class SaleService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         print('✅ Sale completed successfully');
-        return {
-          'success': true,
-          'data': responseData,
-        };
+        return {'success': true, 'data': responseData};
       } else {
         print('❌ Sale completion failed: ${response.statusCode}');
-        return {
-          'success': false,
-          'error': 'Failed to complete sale: ${response.statusCode}',
-          'details': response.body,
-        };
+        return {'success': false, 'error': 'Failed to complete sale: ${response.statusCode}', 'details': response.body};
       }
     } catch (e) {
       print('❌ Error completing sale: $e');
-      return {
-        'success': false,
-        'error': 'Network error: $e',
-      };
+      return {'success': false, 'error': 'Network error: $e'};
     }
   }
 }

@@ -1,8 +1,10 @@
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/response_model.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/permissions_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
@@ -16,7 +18,7 @@ class StaffListService {
     return '$url/api';
   }
 
-  static Future<List<StaffListModel>> fetchStaffList(String deviceId) async {
+  static Future<ResponseModel<List<StaffListModel>>> fetchStaffList(String deviceId) async {
      final url = Uri.parse('${await baseUrl}/ChannelStaff/$deviceId');
 
     try {
@@ -59,14 +61,16 @@ class StaffListService {
             .map((json) => StaffListModel.fromJson(json, allPermission: permissionModels, rolePermisionsMap: rolePermisionsMap))
             .toList();
 
-        return staffs;
+        return ResponseModel(isSuccessfull: true, message: '', body: staffs);
       } else {
         print('❌ Server error: ${response.statusCode}');
-        return [];
+        return ResponseModel(isSuccessfull: false, message: response.body, body: <StaffListModel>[]);
       }
+    } on SocketException catch (_){
+      return ResponseModel(isSuccessfull: false, message: 'No Internet Connectivity', body: <StaffListModel>[]);
     } catch (e) {
       print('❌ Exception fetching staff list: $e');
-      return [];
+      return ResponseModel(isSuccessfull: false, message: e.toString(), body: <StaffListModel>[]);
     }
   }
 }

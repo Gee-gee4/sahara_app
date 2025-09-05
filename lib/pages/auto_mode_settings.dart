@@ -31,7 +31,7 @@ class _AutoModeSettingsState extends State<AutoModeSettings> {
   Future<void> _loadSavedSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Load saved values into the parent's controllers
+    // Load saved values into the parents controllers
     widget.urlController.text = prefs.getString(urlKey) ?? '';
     widget.stationNameController.text = prefs.getString(stationNameKey) ?? '';
     widget.fetchingTimeController.text = prefs.getString(durationKey) ?? '';
@@ -66,7 +66,6 @@ class _AutoModeSettingsState extends State<AutoModeSettings> {
       ),
       keyboardType: keyboardType,
       autofocus: autofocus,
-      // ✅ REMOVED auto-save on change - now only saves when user clicks main button
     );
   }
 

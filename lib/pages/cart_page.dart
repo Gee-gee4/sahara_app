@@ -37,7 +37,7 @@ class _CartPageState extends State<CartPage> {
     _loadCurrentMode();
   }
 
-  // ✅ Add method to check current mode
+  // check current mode
   Future<void> _loadCurrentMode() async {
     final prefs = await SharedPreferences.getInstance();
     final mode = prefs.getString('operationMode') ?? 'manual';
@@ -59,7 +59,7 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  // ✅ Build cart item for AUTO mode (no quantity controls)
+  // builds a cart item for AUTO mode
   Widget _buildAutoModeCartItem(CartItem item, int index) {
     final total = item.price * item.quantity;
     return Card(
@@ -89,7 +89,7 @@ class _CartPageState extends State<CartPage> {
                 ),
               ),
 
-              // Fixed quantity display (no controls)
+              //quantity display no +/-
               SizedBox(
                 width: 80,
                 child: Column(
@@ -145,7 +145,7 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  // ✅ Build cart item for MANUAL mode (with quantity controls)
+  // builds a cart item for MANUAL mode has +&-
   Widget _buildManualModeCartItem(CartItem item, int index) {
     final total = item.price * item.quantity;
     return Card(
@@ -175,7 +175,7 @@ class _CartPageState extends State<CartPage> {
                 ),
               ),
 
-              // Quantity controls
+              // Quantity
               SizedBox(
                 width: 140,
                 child: Column(
@@ -247,7 +247,7 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  // Add this method to your class for the cash payment dialog
+  //cash payment dialog
   void _showCashPaymentDialog(BuildContext context) {
     final double total = CartStorage().getTotalPrice();
     final TextEditingController _cashController = TextEditingController(text: total.toStringAsFixed(0));
@@ -268,7 +268,7 @@ class _CartPageState extends State<CartPage> {
       }
     }
 
-    // Debug print to see what payment mode we found
+    // to see what payment was found
     print("🎯 Selected Payment Mode: $selectedPaymentMode");
     print("💳 Payment Mode ID: ${selectedMode?.payModeId}");
     print("📝 Payment Mode Name: ${selectedMode?.payModeDisplayName}");
@@ -331,7 +331,7 @@ class _CartPageState extends State<CartPage> {
 
                     final prefs = await SharedPreferences.getInstance();
                     final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
-                    final channelName = prefs.getString('channelName') ?? 'CMB Station';
+                    final channelName = prefs.getString('channelName') ?? 'Station';
                     final termNumber = prefs.getString('termNumber') ?? '8b7118e04fecbaf2';
                     final refNumber = await RefGenerator.generate();
 
@@ -349,23 +349,23 @@ class _CartPageState extends State<CartPage> {
                           user: widget.user,
                           cartItems: cartItems,
                           cashGiven: amount,
-                          customerName: 'Cash Customer', // Better than empty string
+                          customerName: 'Cash Customer', 
                           card: 'N/A',
                           accountType: 'Cash Sale',
                           vehicleNumber: 'N/A',
-                          showCardDetails: false, // No card details for cash-only
+                          showCardDetails: false, // no card details for cash only
                           companyName: companyName,
                           channelName: channelName,
                           refNumber: refNumber,
                           termNumber: termNumber,
-                          // NO CARD DATA for cash-only sales:
+                          // NO CARD DATA for cash only sales
                           cardUID: null,
                           customerAccountNo: null,
                           discount: null,
                           clientTotal: null,
                           customerBalance: null,
                           accountProducts: null,
-                          // PASS THE REAL PAYMENT MODE:
+                          // pass the cash mode
                           paymentModeId: selectedMode?.payModeId ?? 2,
                           paymentModeName: selectedMode?.payModeDisplayName ?? 'Cash',
                         ),
@@ -431,7 +431,7 @@ class _CartPageState extends State<CartPage> {
                 itemBuilder: (context, index) {
                   final item = cartItems[index];
 
-                  // ✅ Show different cart item based on current mode
+                  // show different cart item based on current mode
                   return currentMode == OperationMode.auto
                       ? _buildAutoModeCartItem(item, index)
                       : _buildManualModeCartItem(item, index);
@@ -439,7 +439,7 @@ class _CartPageState extends State<CartPage> {
               ),
             ),
 
-            // Total and checkout section (same for both modes)
+            // Total and checkout section
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
@@ -451,7 +451,7 @@ class _CartPageState extends State<CartPage> {
               ),
             ),
 
-            // Payment and checkout section (same for both modes)
+            // Payment and checkout section
             Column(
               children: [
                 DropdownButtonFormField<String>(
@@ -478,7 +478,7 @@ class _CartPageState extends State<CartPage> {
                 ),
                 SizedBox(height: 10),
                 myButton(context, () {
-                  // 🔒 Check if cart is empty
+                  // Check if cart is empty
                   if (CartStorage().cartItems.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -492,7 +492,7 @@ class _CartPageState extends State<CartPage> {
                     return;
                   }
 
-                  // 🔒 Check if payment mode is not selected
+                  // Check if payment mode is not selected
                   if (selectedPaymentMode == null || selectedPaymentMode!.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -506,11 +506,11 @@ class _CartPageState extends State<CartPage> {
                     return;
                   }
 
-                  // 🔍 Get the selected payment mode from Hive
+                  //Get the selected payment mode from Hive
                   final box = Hive.box('payment_modes');
                   final rawModes = box.get('acceptedModes', defaultValue: []);
 
-                  // Safely convert the dynamic list to a list of PaymentModeModel
+                  //converts the dynamic list to a list of PaymentModeModel
                   final savedModes = (rawModes as List)
                       .map((e) => Map<String, dynamic>.from(e as Map))
                       .map((e) => PaymentModeModel.fromJson(e))
@@ -524,9 +524,9 @@ class _CartPageState extends State<CartPage> {
                     }
                   }
 
-                  // 💳 Check if Internal Card is selected
+                  // Check if Internal Card is selected
                   if (selectedMode != null && selectedMode.payModeCategory == 'Internal Card') {
-                    // Navigate directly to card sales
+                    // Navigate to card sales
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -547,7 +547,7 @@ class _CartPageState extends State<CartPage> {
                     return;
                   }
 
-                  // 💰 For all other payment modes (Cash, etc.) - show the card dialog
+                  //  For all other payment modes shows the card dialog
                   showDialog(
                     context: context,
                     barrierDismissible: false,

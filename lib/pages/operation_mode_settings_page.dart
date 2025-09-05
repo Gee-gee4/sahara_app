@@ -37,7 +37,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
     _loadCurrentMode();
     _loadAutoModeSettings();
     
-    // Add listeners to text controllers
+    // listeners to text controllers
     _urlController.addListener(_onTextFieldChanged);
     _stationNameController.addListener(_onTextFieldChanged);
     _fetchingTimeController.addListener(_onTextFieldChanged);
@@ -103,7 +103,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       }
 
       if (_hasModeChanged) {
-        // Mode changed - save mode and logout
+        // Mode changed save mode and logout
         await SharedPrefsHelper.savePosSettings(
           mode: _newMode == OperationMode.auto ? 'auto' : 'manual',
           receiptCount: 1,
@@ -121,7 +121,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
         // Wait a moment for the snackbar to show
         await Future.delayed(Duration(milliseconds: 500));
 
-        // Navigate to UsersPage (logout) and clear the entire navigation stack
+        // Navigate to UsersPage and clear the entire navigation stack
         if (context.mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => UsersPage()),
@@ -129,7 +129,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
           );
         }
       } else {
-        // Only settings changed - save without logout
+        // Only settings changed save without logout
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Settings saved successfully'),
@@ -156,7 +156,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to save settings'),
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.grey,
         ),
       );
     } finally {
@@ -260,7 +260,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
 
-                    // Show auto mode settings when auto is selected OR when current mode is auto
+                    // Show auto mode settings when auto is selected or when current mode is auto
                     if (_newMode == OperationMode.auto || _currentMode == OperationMode.auto) 
                       _buildAutoModeSettings(),
 

@@ -77,7 +77,7 @@ class ReprintPrinterService {
     );
     sheet.addElement(
       PrintData.text(
-        channelName ?? (ticket['channelName'] ?? 'CMB Station'), 
+        channelName ?? (ticket['channelName'] ?? 'Station'), 
         alignment: PrintAlignment.center, 
         fontSize: PrintedFontSize.size24
       ),

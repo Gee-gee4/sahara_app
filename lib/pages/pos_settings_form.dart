@@ -124,7 +124,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                     if (_mode == OperationMode.auto) ...[
                       AutoModeSettings(
                         borderColor: ColorsUniversal.buttonsColor,
-                        urlController: _urlController, // ✅ Pass same controllers
+                        urlController: _urlController, // Pass same controllers
                         stationNameController: _stationNameController,
                         fetchingTimeController: _fetchingTimeController,
                       ),
@@ -180,7 +180,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       // Convert settings to saveable format
                       final modeString = _mode == OperationMode.manual ? 'manual' : 'auto';
                       final receiptCount = _receipt == ReceiptNumber.single ? 1 : 2;
-                      // ✅ Now this will save the ACTUAL values from the text fields
+                      // saves the ACTUAL values from the text fields
                       await PosSettingsHelper.saveSettings(
                         url: _urlController.text,
                         stationName: _stationNameController.text,
@@ -202,7 +202,24 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       print('📱 Device ID: $deviceId');
 
                       // Fetch channel details by device ID
-                      final channel = await ChannelService.fetchChannelByDeviceId(deviceId);
+                      final channelResponse = await ChannelService.fetchChannelByDeviceId(deviceId);
+
+                      //Check if the channel fetch was successful
+                      if (!channelResponse.isSuccessfull) {
+                        // Show error message
+                        if (rootContext.mounted) {
+                          showDialog(
+                            context: rootContext,
+                            builder: (_) => AlertDialog(
+                              backgroundColor: Colors.white,
+                              title: Text('Error'),
+                              content: Text(channelResponse.message),
+                              actions: [TextButton(child: Text('OK'), onPressed: () => Navigator.pop(rootContext))],
+                            ),
+                          );
+                        }
+                        return; // Stop execution here
+                      }
 
                       // Fetch accepted payment modes for this device
                       final acceptedProductModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
@@ -220,8 +237,9 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                       // Fetch staff list for this station
                       final staffList = await StaffListService.fetchStaffList(deviceId);
+
                       print('✅ The Staff List is:');
-                      for (var staff in staffList) {
+                      for (var staff in staffList.body) {
                         print('  •${staff.staffName} (${staff.staffPin})');
                       }
 
@@ -238,7 +256,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                           }
                         }
                       }
-
+                      final channel = channelResponse.body;
                       if (channel != null) {
                         // Save basic channel info to shared prefs
                         final prefs = await SharedPreferences.getInstance();
@@ -252,14 +270,13 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                           builder: (_) => AlertDialog(
                             backgroundColor: ColorsUniversal.background,
                             title: Text(channel.channelName),
-                            // content: Text('$channel station found. Proceed?'),
                             actions: [
                               TextButton(
                                 child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                                 onPressed: () async {
                                   // Show progress dialog while saving everything
                                   if (!rootContext.mounted) return;
-                                  // ✅ Use full-screen loader instead
+                                  // Use full-screen loader instead
                                   setState(() => isFinalSync = true);
 
                                   try {
@@ -285,7 +302,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                                     // Save staff list to Hive
                                     final staffBox = Hive.box('staff_list');
-                                    final staffAsMaps = staffList.map((staff) => staff.toJson()).toList();
+                                    final staffAsMaps = staffList.body.map((staff) => staff.toJson()).toList();
                                     await staffBox.put('staffList', staffAsMaps);
                                     print('✅ Saved ${staffAsMaps.length} staff records to Hive');
 
@@ -299,7 +316,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                                     if (rootContext.mounted) {
                                       setState(() => isFinalSync = false); // remove loading screen
 
-                                      // ✅ Mark setup as complete
+                                      // Mark setup as complete
                                       final prefs = await SharedPreferences.getInstance();
                                       await prefs.setBool('isSetupComplete', true);
                                       Navigator.push(rootContext, MaterialPageRoute(builder: (_) => UsersPage()));

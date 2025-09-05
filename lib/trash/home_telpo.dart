@@ -19,7 +19,7 @@ class _HomeTelpoState extends State<HomeTelpo> {
     try {
       final result = await _printer.printReceipt(
         title: 'SAHARA FCS',
-        station: 'CMB Station',
+        station: 'Station',
         items: ['Petrol    200  1  200', 'Diesel    100  3  300'],
         cash: '1000',
         change: '500',
@@ -67,7 +67,7 @@ class _HomeTelpoState extends State<HomeTelpo> {
                 Center(
                   child: Text('SAHARA FCS', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                Center(child: Text('CMB Station')),
+                Center(child: Text('Station')),
                 const SizedBox(height: 8),
                 const Center(
                   child: Text('SALE', style: TextStyle(decoration: TextDecoration.underline)),

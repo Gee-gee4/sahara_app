@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
                       radius: 3,
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
-                        // Use the already loaded operation mode instead of calling _getSavedMode() again
+                        // Use the already loaded operation mode
                         print("Category tapped: ${category.productCategoryName}, Current mode: $_currentOperationMode");
 
                         // Check if it's automation mode AND the category is FUEL
@@ -98,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                             _activeCategoryPage = FuelPage(user: widget.user);
                           });
                         } else {
-                          // All other categories (including non-fuel in auto mode) work manually
+                          // All other categories work manually
                           setState(() {
                             _activeCategoryPage = ProductListPage(
                               categoryName: category.productCategoryName,
@@ -287,7 +287,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: ColorsUniversal.fillWids,
         activeColor: ColorsUniversal.buttonsColor,
         color: Colors.white70,
-        style: TabStyle.react, // or `fixed`, `flip`, etc.
+        style: TabStyle.react, 
         curveSize: 70,
         items: const [
           TabItem(icon: Icons.home, title: 'Home'),
@@ -304,7 +304,7 @@ class _HomePageState extends State<HomePage> {
               _activeCategoryPage = null;
             }
 
-            // Handle NFC tab tap - navigate directly to TapCardPage
+            // Handle NFC tab tap navigate directly to TapCardPage
             if (index == 3) {
               Navigator.push(
                 context,
@@ -321,7 +321,6 @@ class _HomePageState extends State<HomePage> {
           });
         },
       ),
-      // Floating Action Button positioned above bottom nav
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -339,7 +338,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-      // Position the FAB properly
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }

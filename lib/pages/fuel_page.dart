@@ -24,7 +24,6 @@ class _FuelPageState extends State<FuelPage> {
   void initState() {
     super.initState();
     isLoading = true;
-    // ✅ Simple approach like working project
     _pumpsModule.fetchPumps().then((ps) {
       setState(() {
         isLoading = false;
@@ -44,22 +43,18 @@ class _FuelPageState extends State<FuelPage> {
         automaticallyImplyLeading: false,
         elevation: 0,
         backgroundColor: Colors.transparent,
-        // title: const Text('Fuel Pumps'),
         actions: [
           InkWell(
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>TransactionPage(pumpId: 'all',user: widget.user,),
+                builder: (context) => TransactionPage(pumpId: 'all', user: widget.user),
               ),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               width: 170,
-              decoration: BoxDecoration(
-                color: ColorsUniversal.fillWids,
-                borderRadius: BorderRadius.circular(16),
-              ),
+              decoration: BoxDecoration(color: ColorsUniversal.fillWids, borderRadius: BorderRadius.circular(16)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -69,8 +64,7 @@ class _FuelPageState extends State<FuelPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                               TransactionPage(pumpId: 'all',user: widget.user,),
+                          builder: (context) => TransactionPage(pumpId: 'all', user: widget.user),
                         ),
                       );
                     },
@@ -88,16 +82,10 @@ class _FuelPageState extends State<FuelPage> {
                 size: 70,
                 duration: Duration(milliseconds: 1000),
                 itemBuilder: (context, index) {
-                  final colors = [
-                    ColorsUniversal.buttonsColor,
-                    ColorsUniversal.fillWids,
-                  ];
+                  final colors = [ColorsUniversal.buttonsColor, ColorsUniversal.fillWids];
                   final color = colors[index % colors.length];
                   return DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                   );
                 },
               ),
@@ -122,8 +110,7 @@ class _FuelPageState extends State<FuelPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              TransactionPage(pumpId: pumpCurrent.pumpId,user: widget.user,),
+                          builder: (context) => TransactionPage(pumpId: pumpCurrent.pumpId, user: widget.user),
                         ),
                       );
                     },
@@ -131,8 +118,7 @@ class _FuelPageState extends State<FuelPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              TransactionPage(pumpId: pumpCurrent.pumpId,user: widget.user,),
+                          builder: (context) => TransactionPage(pumpId: pumpCurrent.pumpId, user: widget.user),
                         ),
                       );
                     },

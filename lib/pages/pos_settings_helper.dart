@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sahara_app/utils/configs.dart'; // Import your configs to access the constants
+import 'package:sahara_app/utils/configs.dart';
 
 class PosSettingsHelper {
   static Future<void> saveSettings({

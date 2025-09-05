@@ -14,7 +14,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Handle card actions (NFC operations)
+
   Future<void> _handleCardAction(TapCardAction action) async {
     if (action == TapCardAction.changePin) {
       // Use transaction service for PIN change
@@ -49,7 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _handleTransactionAction(String actionName) async {
     switch (actionName) {
       case 'Ministatement':
-        // Navigate to TapCardPage for ministatement (requires NFC)
+        // Navigate to TapCardPage for ministatement
         Navigator.push(
           context,
           MaterialPageRoute(

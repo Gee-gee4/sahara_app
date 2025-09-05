@@ -10,7 +10,7 @@ import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sahara_app/pages/pos_settings_form.dart'; // Import for OperationMode
+import 'package:sahara_app/pages/pos_settings_form.dart'; 
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -111,26 +111,6 @@ class _ProductsPageState extends State<ProductsPage> {
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 children: [
-                  // Show mode indicator for debugging (you can remove this later)
-                  // if (_currentMode == OperationMode.auto)
-                  //   Container(
-                  //     margin: EdgeInsets.only(bottom: 8),
-                  //     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  //     decoration: BoxDecoration(
-                  //       color: ColorsUniversal.buttonsColor.withOpacity(0.1),
-                  //       borderRadius: BorderRadius.circular(20),
-                  //       border: Border.all(color: ColorsUniversal.buttonsColor.withOpacity(0.3)),
-                  //     ),
-                  //     child: Text(
-                  //       'Auto Mode - Fuel products handled separately',
-                  //       style: TextStyle(
-                  //         color: ColorsUniversal.buttonsColor,
-                  //         fontSize: 12,
-                  //         fontWeight: FontWeight.w500,
-                  //       ),
-                  //     ),
-                  //   ),
-                  
                   TextField(
                     controller: _searchController,
                     onChanged: _filterProducts,

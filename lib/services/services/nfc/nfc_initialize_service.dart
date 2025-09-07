@@ -57,7 +57,9 @@ class NFCInitializeService extends NFCBaseService {
           String pin = pinResult.data.replaceAll(';', '').trim();
 
           final imei = await getSavedOrFetchDeviceId();
-          final accountData = await InitializeCardService.fetchCardData(
+          
+          // 🔧 FIX: Handle ResponseModel properly
+          final accountDataResponse = await InitializeCardService.fetchCardData(
             cardUID: convertedUID,
             imei: imei,
             staffID: user.staffId,
@@ -68,6 +70,30 @@ class NFCInitializeService extends NFCBaseService {
           Navigator.of(context).pop();
           shouldDismissSpinner = false;
 
+          // Check if the API call failed due to no internet
+          if (!accountDataResponse.isSuccessfull) {
+            if (accountDataResponse.message.contains('No Internet Connectivity')) {
+              await NFCBaseService.showErrorDialog(
+                context,
+                'No Internet ',
+                'Internet is required for this operation. Please check your connection and try again.',
+                popPage: true,
+              );
+              return NFCResult.error('No internet connectivity');
+            } else {
+              await NFCBaseService.showErrorDialog(
+                context,
+                'Error',
+                'Failed to fetch card data: ${accountDataResponse.message}',
+                popPage: true,
+              );
+              return NFCResult.error('Failed to fetch card data');
+            }
+          }
+
+          // Extract the actual model from ResponseModel
+          final accountData = accountDataResponse.body;
+          
           await NFCBaseService.showErrorDialog(
             context,
             'Card Already Initialized',
@@ -83,14 +109,45 @@ class NFCInitializeService extends NFCBaseService {
 
       // Continue with initialization...
       final imei = await getSavedOrFetchDeviceId();
-      final accountData = await InitializeCardService.fetchCardData(
+      
+      // 🔧 FIX: Handle ResponseModel properly
+      final accountDataResponse = await InitializeCardService.fetchCardData(
         cardUID: convertedUID,
         imei: imei,
         staffID: user.staffId,
       );
 
-      // ignore: unnecessary_null_comparison
-      if (accountData == null || accountData.customerAccountNumber == null || accountData.customerAccountNumber == 0) {
+      // Check if the API call failed
+      if (!accountDataResponse.isSuccessfull) {
+        await FlutterNfcKit.finish();
+
+        if (!context.mounted) return NFCResult.error('Context not mounted');
+
+        Navigator.of(context).pop();
+        shouldDismissSpinner = false;
+
+        if (accountDataResponse.message.contains('No Internet Connectivity')) {
+          await NFCBaseService.showErrorDialog(
+            context,
+            'No Internet',
+            'Internet connection is required for this operation. Please check your connection and try again.',
+          );
+          return NFCResult.error('No internet connectivity');
+        } else {
+          await NFCBaseService.showErrorDialog(
+            context,
+            'Failed',
+            'Could not fetch card data: ${accountDataResponse.message}',
+          );
+          return NFCResult.error('Failed to fetch card data');
+        }
+      }
+
+      // Extract the actual model from ResponseModel
+      final accountData = accountDataResponse.body;
+
+      // Check if we have valid account data
+      if (accountData == null || accountData.customerAccountNumber == 0) {
         await FlutterNfcKit.finish();
 
         if (!context.mounted) return NFCResult.error('Context not mounted');
@@ -244,6 +301,7 @@ class NFCInitializeService extends NFCBaseService {
         throw Exception("Failed to change keys for sector 2: ${changeKey2.data}");
       }
 
+      // 🔧 FIX: This should also be updated to use ResponseModel if needed
       final completed = await CompleteCardInitService.completeInitializeCard(
         uid: convertedUID,
         accountNo: accountData.customerAccountNumber,

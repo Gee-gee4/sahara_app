@@ -35,6 +35,7 @@ class NFCFormatService extends NFCBaseService {
       final nfc = NfcFunctions();
       List<String> formatResults = [];
 
+      // Format the physical card sectors first
       for (int sector in [1, 2]) {
         bool formatted = false;
         try {
@@ -61,8 +62,11 @@ class NFCFormatService extends NFCBaseService {
 
       await FlutterNfcKit.finish();
 
+      // Now handle the API call to update the system
       final convertedUID = UIDConverter.convertToPOSFormat(rawUID);
-      final apiSuccess = await InitializeCardService.formatCardAPI(
+      
+      // 🔧 Handle ResponseModel properly
+      final apiResponse = await InitializeCardService.formatCardAPI(
         cardUID: convertedUID, 
         staffId: user.staffId
       );
@@ -72,11 +76,47 @@ class NFCFormatService extends NFCBaseService {
       Navigator.of(context).pop();
       shouldDismissSpinner = false;
 
+      // Check if API call was successful
+      if (!apiResponse.isSuccessfull) {
+        if (apiResponse.message.contains('No Internet Connectivity')) {
+          // Physical card was formatted but couldn't update system
+          await NFCBaseService.showErrorDialog(
+            context,
+            'No Internet',
+            'Card was formatted but not updated in the system.\n\n'
+            'Please ensure you have internet connectivity .',
+          );
+          
+          return NFCResult.success('Card physically formatted but system update failed', data: {
+            'formatResults': formatResults,
+            'apiSuccess': false,
+            'apiError': 'No internet connectivity',
+            'uid': convertedUID,
+          });
+        } else {
+          // Physical card was formatted but API failed for other reasons
+          await NFCBaseService.showErrorDialog(
+            context,
+            'Partial Success',
+            'Card was physically formatted but could not be updated in the system.\n\n'
+            'Error: ${apiResponse.message}',
+          );
+          
+          return NFCResult.success('Card physically formatted but system update failed', data: {
+            'formatResults': formatResults,
+            'apiSuccess': false,
+            'apiError': apiResponse.message,
+            'uid': convertedUID,
+          });
+        }
+      }
+
+      // Both physical formatting and API update were successful
       NFCBaseService.showSuccessSnackbar(context, 'Card formatted successfully.');
       
       return NFCResult.success('Card formatted successfully', data: {
         'formatResults': formatResults,
-        'apiSuccess': apiSuccess,
+        'apiSuccess': true,
         'uid': convertedUID,
       });
 

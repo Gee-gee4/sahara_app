@@ -86,12 +86,24 @@ class NFCSalesService extends NFCBaseService {
       }
 
       // Step 5: Fetch customer account details
-      final accountData = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
+      final accountDataRes = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
         deviceId: await getSavedOrFetchDeviceId(),
       );
 
-      if (accountData == null) {
+      if (!accountDataRes.isSuccessfull) {
+        if (context.mounted) Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No Internet. Please check your internet connectivity'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return NFCResult.error('Customer data not found');
+      }
+      if (accountDataRes.body == null) {
         if (context.mounted) Navigator.pop(context);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,6 +115,8 @@ class NFCSalesService extends NFCBaseService {
         );
         return NFCResult.error('Customer data not found');
       }
+
+      final accountData =accountDataRes.body!;
 
       print("🎯 Account number from card: $accountNo");
       print("🎯 Card UID: $cardUID");
@@ -196,18 +210,24 @@ class NFCSalesService extends NFCBaseService {
       print("🎯 Card UID: $cardUID");
 
       // Step 5: Fetch customer account details
-      final accountData = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
+      final accountDataRes = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
         deviceId: await getSavedOrFetchDeviceId(),
       );
 
-      if (accountData == null) {
+      if (!accountDataRes.isSuccessfull) {
+        Navigator.of(context).pop();
+        _showErrorMessage(context, 'No NET.');
+        return NFCResult.error('No NET');
+      }
+      if (accountDataRes.body == null) {
         Navigator.of(context).pop();
         _showErrorMessage(context, 'Account details not found.');
         return NFCResult.error('Account details not found');
       }
 
       Navigator.of(context).pop(); // Close spinner
+      final accountData = accountDataRes.body!;
 
       // Step 6: Calculate totals using ONLY client pricing
       final clientTotal = _calculateClientTotal(accountData.products);

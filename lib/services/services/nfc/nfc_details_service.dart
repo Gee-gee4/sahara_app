@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
+import 'package:sahara_app/models/customer_account_details_model.dart';
 import 'dart:async';
 import 'nfc_base_service.dart';
 import '../../../models/nfc_result.dart';
@@ -136,7 +137,7 @@ class NFCDetailsService extends NFCBaseService {
       final deviceId = await getSavedOrFetchDeviceId();
       print('📱 Device ID used for sync: $deviceId');
 
-      final details = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
+      final detailsRes = await CustomerAccountDetailsService.fetchCustomerAccountDetails(
         accountNo: accountNo,
         deviceId: deviceId,
       );
@@ -148,7 +149,18 @@ class NFCDetailsService extends NFCBaseService {
       shouldDismissSpinner = false;
 
       // Step 7: Check if details were found
-      if (details == null) {
+      if (!detailsRes.isSuccessfull) {
+        print("❌ No details found for account: $accountNo");
+
+        await NFCBaseService.showErrorDialog(
+          context,
+          'No Internet',
+          'Please check your internet connectivity\n\n'
+          'Could not read customer details for account: $accountNo',
+        );
+        return NFCResult.error('No details found for account');
+      }
+      if (detailsRes.body ==null) {
         print("❌ No details found for account: $accountNo");
 
         await NFCBaseService.showErrorDialog(
@@ -162,6 +174,8 @@ class NFCDetailsService extends NFCBaseService {
 
       // Step 8: Success! Navigate to details page
       print("✅ Customer details fetched successfully");
+
+      final CustomerAccountDetailsModel details = detailsRes.body!;
       
       Navigator.push(
         context,

@@ -130,7 +130,7 @@ class NFCInitializeService extends NFCBaseService {
           await NFCBaseService.showErrorDialog(
             context,
             'No Internet',
-            'Internet connection is required for this operation. Please check your connection and try again.',
+            'Internet is required for this operation.\n\n Please check your connection.',
           );
           return NFCResult.error('No internet connectivity');
         } else {

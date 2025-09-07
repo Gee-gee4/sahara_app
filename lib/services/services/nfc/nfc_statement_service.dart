@@ -114,7 +114,7 @@ class NFCStatementService extends NFCBaseService {
           await NFCBaseService.showErrorDialog(
             context,
             'No Internet',
-            'Internet connection is required to fetch your mini statement.\n\nPlease check your connection.',
+            'Internet is required to fetch your mini statement.\n\nPlease check your connection.',
           );
           return NFCResult.error('No internet connectivity');
         } else {

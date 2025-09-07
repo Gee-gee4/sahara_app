@@ -92,15 +92,19 @@ class NFCSalesService extends NFCBaseService {
       );
 
       if (!accountDataRes.isSuccessfull) {
-        if (context.mounted) Navigator.pop(context);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No Internet. Please check your internet connectivity'),
-            backgroundColor: Colors.grey,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        if (context.mounted) Navigator.pop(context); // Close loading dialog
+await NFCBaseService.showErrorDialog(context, 'No Internet', 'No Internet. Please check your internet connectivity');
+        // if (context.mounted) {
+        //   showDialog(
+        //     context: context,
+        //     builder: (_) => AlertDialog(
+        //       backgroundColor: Colors.white,
+        //       title: Text('No Internet'),
+        //       content: Text('No Internet. Please check your internet connectivity'),
+        //       actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))],
+        //     ),
+        //   );
+        // }
         return NFCResult.error('Customer data not found');
       }
       if (accountDataRes.body == null) {
@@ -116,7 +120,7 @@ class NFCSalesService extends NFCBaseService {
         return NFCResult.error('Customer data not found');
       }
 
-      final accountData =accountDataRes.body!;
+      final accountData = accountDataRes.body!;
 
       print("🎯 Account number from card: $accountNo");
       print("🎯 Card UID: $cardUID");

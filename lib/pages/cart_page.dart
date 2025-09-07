@@ -422,7 +422,7 @@ class _CartPageState extends State<CartPage> {
                           builder: (_) => AlertDialog(
                             backgroundColor: Colors.white,
                             title: Text('No Internet'),
-                            content: Text('Internet connection is required to complete the sale. Please check your connection and try again.'),
+                            content: Text('Internet is required to complete the sale. \n\nPlease check your connection.'),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
@@ -435,6 +435,7 @@ class _CartPageState extends State<CartPage> {
                         showDialog(
                           context: context,
                           builder: (_) => AlertDialog(
+                            backgroundColor: Colors.white,
                             title: Text('Sale Failed'),
                             content: Text('Failed to complete sale: ${saleResponse.message}'),
                             actions: [

@@ -1,7 +1,9 @@
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/response_model.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/redeem_rewards_model.dart';
 
@@ -13,7 +15,7 @@ class RedeemRewardsService {
     }
     return '$url/api';
   }
-  static Future<List<RedeemRewardsModel>> fetchRedeemRewards() async {
+  static Future<ResponseModel<List<RedeemRewardsModel>>> fetchRedeemRewards() async {
      final url = Uri.parse('${await baseUrl}/RedeemRewards');
 
     try {
@@ -27,14 +29,18 @@ class RedeemRewardsService {
             .map((json) => RedeemRewardsModel.fromJson(json))
             .toList();
 
-        return rewards;
+        return ResponseModel(isSuccessfull: true, message: '', body: rewards);
       } else {
         print('❌ Server error: ${response.statusCode}');
-        return [];
+        return ResponseModel(isSuccessfull: false, message: response.body, body: []);
       }
-    } catch (e) {
+    } 
+    on SocketException catch (_){
+      return ResponseModel(isSuccessfull: false, message: 'No Internet Connectivity', body: []);
+    } 
+    catch (e) {
       print('❌ Exception fetching redeem rewards: $e');
-      return [];
+      return ResponseModel(isSuccessfull: false, message: e.toString(), body: []);
     }
   }
 }

@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:http/http.dart' as http;
 import 'package:sahara_app/helpers/response_model.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';

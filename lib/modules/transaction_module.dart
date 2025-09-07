@@ -1,9 +1,8 @@
-// ignore_for_file: avoid_print
-
 import 'dart:convert';
-
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/helpers/response_model.dart';
 import 'package:sahara_app/models/transaction_model.dart';
 import 'package:sahara_app/modules/auth_module.dart';
 import 'package:sahara_app/utils/configs.dart';
@@ -19,9 +18,7 @@ class TransactionModule {
   }
 
   /// Fetches transactions for a specific pump
-  Future<List<TransactionModel>> fetchTransactions(String pumpId) async {
-    List<TransactionModel> items = [];
-
+  Future<ResponseModel<List<TransactionModel>>> fetchTransactions(String pumpId) async {
     try {
       final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
       
@@ -51,7 +48,7 @@ class TransactionModule {
 
       if (res.statusCode == 200) {
         List<Map> rawTransactions = List<Map>.from(json.decode(res.body) ?? []);
-        items = rawTransactions.map((transaction) => TransactionModel(
+        final items = rawTransactions.map((transaction) => TransactionModel(
           transactionId: transaction['id']?.toString(),
           nozzle: transaction['nozzle'].toString(),
           productName: transaction['productName'].toString(),
@@ -61,16 +58,36 @@ class TransactionModule {
           totalAmount: double.tryParse(transaction['amount'].toString()) ?? 0,
           dateTimeSold: transaction['dateTime'],
         )).toList();
-      }
-    } catch (_) {}
 
-    return items;
+        return ResponseModel(
+          isSuccessfull: true,
+          message: '',
+          body: items
+        );
+      } else {
+        return ResponseModel(
+          isSuccessfull: false,
+          message: 'Server error: ${res.statusCode}',
+          body: []
+        );
+      }
+    } on SocketException catch (_) {
+      return ResponseModel(
+        isSuccessfull: false,
+        message: 'No Internet Connectivity',
+        body: []
+      );
+    } catch (e) {
+      return ResponseModel(
+        isSuccessfull: false,
+        message: e.toString(),
+        body: []
+      );
+    }
   }
 
   /// Fetches transactions for all pumps
-  Future<List<TransactionModel>> fetchAllTransactions() async {
-    List<TransactionModel> allItems = [];
-
+  Future<ResponseModel<List<TransactionModel>>> fetchAllTransactions() async {
     try {
       final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
       
@@ -109,6 +126,7 @@ class TransactionModule {
       if (resPumps.statusCode == 200) {
         Map pumpBody = json.decode(resPumps.body);
         List<Map> pumps = List<Map>.from(pumpBody['pumps'] ?? []);
+        List<TransactionModel> allItems = [];
 
         for (var pump in pumps) {
           final pumpId = pump['rdgIndex'];
@@ -137,16 +155,36 @@ class TransactionModule {
             allItems.addAll(items);
           }
         }
-      }
-    } catch (e) {
-      print('Error fetching all transactions: $e');
-    }
 
-    return allItems;
+        return ResponseModel(
+          isSuccessfull: true,
+          message: '',
+          body: allItems
+        );
+      } else {
+        return ResponseModel(
+          isSuccessfull: false,
+          message: 'Failed to fetch pumps: ${resPumps.statusCode}',
+          body: []
+        );
+      }
+    } on SocketException catch (_) {
+      return ResponseModel(
+        isSuccessfull: false,
+        message: 'No Internet Connectivity',
+        body: []
+      );
+    } catch (e) {
+      return ResponseModel(
+        isSuccessfull: false,
+        message: e.toString(),
+        body: []
+      );
+    }
   }
 
   /// Posts a list of transactions
-  Future postTransaction({
+  Future<ResponseModel<dynamic>> postTransaction({
     required List<CartItem> cartItemTrans,
     String? taxPayerName,
     String? tin,
@@ -179,14 +217,31 @@ class TransactionModule {
         }),
       );
 
-      print(res.statusCode);
-      print(res.body);
-
       if (res.statusCode == 200) {
-        return json.decode(res.body);
+        return ResponseModel(
+          isSuccessfull: true,
+          message: 'Transaction posted successfully',
+          body: json.decode(res.body)
+        );
+      } else {
+        return ResponseModel(
+          isSuccessfull: false,
+          message: 'Server error: ${res.statusCode} - ${res.body}',
+          body: null
+        );
       }
+    } on SocketException catch (_) {
+      return ResponseModel(
+        isSuccessfull: false,
+        message: 'No Internet Connectivity',
+        body: null
+      );
     } catch (e) {
-      print(e);
+      return ResponseModel(
+        isSuccessfull: false,
+        message: e.toString(),
+        body: null
+      );
     }
   }
 }

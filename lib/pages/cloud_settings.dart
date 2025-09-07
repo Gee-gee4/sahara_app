@@ -114,7 +114,7 @@ class _CloudSettingsState extends State<CloudSettings> {
           setState(() => isSyncing = false);
           return;
         }
-        
+
         final channel = channelResponse.body;
 
         // If channelId is 0 or name is null, assume not linked
@@ -134,7 +134,12 @@ class _CloudSettingsState extends State<CloudSettings> {
         _showError('Failed to sync all resources.\n${e.toString()}');
       }
     } else {
-      _showError('Failed to fetch configuration for "$resourceName"');
+      if (resourceSynced.message.contains('No Internet Connectivity')) {
+        _showError('No Internet Connectivity. Please check your connection and try again.');
+      } else{
+        _showError('Failed to fetch configuration for "$resourceName"\nError: ${resourceSynced.message}');
+    
+      }
     }
 
     setState(() => isSyncing = false);

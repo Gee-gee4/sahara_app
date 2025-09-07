@@ -1,8 +1,10 @@
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:sahara_app/helpers/response_model.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 
 import 'package:sahara_app/models/product_category_model.dart';
@@ -16,7 +18,7 @@ class ProductService {
     return '$url/api';
   }
 
-  static Future<List<ProductCategoryModel>> fetchProductItems(String deviceId) async {
+  static Future<ResponseModel<List<ProductCategoryModel>>> fetchProductItems(String deviceId) async {
     final url = Uri.parse('${await baseUrl}/GetPOSProductItems/$deviceId');
 
     try {
@@ -26,16 +28,20 @@ class ProductService {
         final data = jsonDecode(response.body);
 
         final List<dynamic> productItems = data['productItems'];
-        return productItems
+        return ResponseModel(isSuccessfull: true, message: '', body: productItems
             .map((json) => ProductCategoryModel.fromJson(json))
-            .toList();
+            .toList());
       } else {
         print('❌ Failed to fetch products: ${response.statusCode}');
-        return [];
+        return ResponseModel(isSuccessfull: false, message: response.body, body: []);
       }
-    } catch (e) {
+    } 
+    on SocketException catch (_){
+      return ResponseModel(isSuccessfull: false, message: 'No Internet Connectivity', body:[]);
+    } 
+    catch (e) {
       print('❌ Exception fetching product items: $e');
-      return [];
+      return ResponseModel(isSuccessfull: false, message: e.toString(), body: []);
     }
   }
 
@@ -43,9 +49,9 @@ class ProductService {
     final items = await fetchProductItems(deviceId);
 
     final hiveBox = Hive.box('products');
-    final itemsAsMap = items.map((cat) => cat.toJson()).toList();
+    final itemsAsMap = items.body.map((cat) => cat.toJson()).toList();
     await hiveBox.put('productItems', itemsAsMap);
 
-    print('✅ Saved ${items.length} product categories to Hive');
+    print('✅ Saved ${items.body.length} product categories to Hive');
   }
 }

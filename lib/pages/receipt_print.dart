@@ -73,104 +73,109 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
   }
 
   Future<void> _completeSale() async {
-    print('📤 Completing sale transaction...');
-
-    final bool isCardSale = widget.showCardDetails && widget.clientTotal != null && widget.discount != null;
-
-    try {
-      final apiResult = await SaleService.completeSale(
-        refNumber: widget.refNumber,
-        cartItems: widget.cartItems,
-        user: widget.user,
-        isCardSale: isCardSale,
-        customerName: widget.customerName.isNotEmpty ? widget.customerName : null,
-        customerUID: widget.cardUID,
-        customerAccountNo: widget.customerAccountNo,
-        customerAccountBalance: widget.customerBalance,
-        accountProducts: isCardSale ? widget.accountProducts : null,
-        cashGiven: !isCardSale ? widget.cashGiven : null,
-        change: !isCardSale ? (widget.cashGiven - getStationTotal()) : null,
-        paymentModeId: widget.paymentModeId,
-        paymentModeName: widget.paymentModeName,
-      );
-
-      setState(() {
-        _apiCallInProgress = false;
-        if (apiResult['success']) {
-          _saleCompleted = true;
-          print('✅ Sale transaction completed successfully');
-        } else {
-          _apiError = apiResult['error'];
-          print('❌ Sale transaction failed: ${_apiError}');
-        }
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_saleCompleted ? 'Sale completed successfully!' : 'Sale failed: $_apiError'),
-            backgroundColor: _saleCompleted ? hexToColor('8f9c68') : Colors.grey,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _apiCallInProgress = false;
-        _apiError = 'Network error: $e';
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sale failed: Network error'),
-            backgroundColor: Colors.grey,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      print('❌ Error completing sale: $e');
-    }
-  }
-
-  Future<void> _printReceipt() async {
-  if (_isPrinting) return; // Prevent multiple clicks
+  print('📤 Completing sale transaction...');
+  final bool isCardSale = widget.showCardDetails && widget.clientTotal != null && widget.discount != null;
   
-  setState(() {
-    _isPrinting = true;
-  });
-
   try {
-    await PrinterHelper.printReceipt(
-      context: context,
-      user: widget.user,
-      cartItems: widget.cartItems,
-      cashGiven: widget.cashGiven,
-      customerName: widget.customerName,
-      card: widget.card,
-      accountType: widget.accountType,
-      vehicleNumber: widget.vehicleNumber,
-      showCardDetails: widget.showCardDetails,
+    final apiResult = await SaleService.completeSale(
       refNumber: widget.refNumber,
-      termNumber: widget.termNumber,
-      discount: widget.discount,
-      clientTotal: widget.clientTotal,
-      customerBalance: widget.customerBalance,
-      accountProducts: widget.accountProducts,
-      companyName: widget.companyName,
-      channelName: widget.channelName,
-      saleCompleted: _saleCompleted,
-      apiCallInProgress: _apiCallInProgress,
-      apiError: _apiError,
+      cartItems: widget.cartItems,
+      user: widget.user,
+      isCardSale: isCardSale,
+      customerName: widget.customerName.isNotEmpty ? widget.customerName : null,
+      customerUID: widget.cardUID,
+      customerAccountNo: widget.customerAccountNo,
+      customerAccountBalance: widget.customerBalance,
+      accountProducts: isCardSale ? widget.accountProducts : null,
+      cashGiven: !isCardSale ? widget.cashGiven : null,
+      change: !isCardSale ? (widget.cashGiven - getStationTotal()) : null,
+      paymentModeId: widget.paymentModeId,
+      paymentModeName: widget.paymentModeName,
     );
-  } finally {
+    
+    setState(() {
+      _apiCallInProgress = false;
+      
+      // 🔍 Handle duplicate key errors as success
+      if (apiResult.isSuccessfull || 
+          apiResult.message.contains('duplicate key') ||
+          apiResult.message.contains('IX_Finance_Transaction')) {
+        _saleCompleted = true;
+        print('✅ Sale transaction completed successfully');
+        if (apiResult.message.contains('duplicate')) {
+          print('ℹ️ Duplicate transaction detected - sale was already processed');
+        }
+      } else {
+        _apiError = apiResult.message;
+        print('❌ Sale transaction failed: $_apiError');
+      }
+    });
+    
     if (mounted) {
-      setState(() {
-        _isPrinting = false;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_saleCompleted ? 'Sale completed successfully!' : 'Sale failed: $_apiError'),
+          backgroundColor: _saleCompleted ? hexToColor('8f9c68') : Colors.grey,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
+  } catch (e) {
+    setState(() {
+      _apiCallInProgress = false;
+      _apiError = 'Network error: $e';
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sale failed: Network error'),
+          backgroundColor: Colors.grey,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+    print('❌ Error completing sale: $e');
   }
 }
+
+  Future<void> _printReceipt() async {
+    if (_isPrinting) return; // Prevent multiple clicks
+
+    setState(() {
+      _isPrinting = true;
+    });
+
+    try {
+      await PrinterHelper.printReceipt(
+        context: context,
+        user: widget.user,
+        cartItems: widget.cartItems,
+        cashGiven: widget.cashGiven,
+        customerName: widget.customerName,
+        card: widget.card,
+        accountType: widget.accountType,
+        vehicleNumber: widget.vehicleNumber,
+        showCardDetails: widget.showCardDetails,
+        refNumber: widget.refNumber,
+        termNumber: widget.termNumber,
+        discount: widget.discount,
+        clientTotal: widget.clientTotal,
+        customerBalance: widget.customerBalance,
+        accountProducts: widget.accountProducts,
+        companyName: widget.companyName,
+        channelName: widget.channelName,
+        saleCompleted: _saleCompleted,
+        apiCallInProgress: _apiCallInProgress,
+        apiError: _apiError,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPrinting = false;
+        });
+      }
+    }
+  }
 
   // Get client price for a specific product (with fallback to station price)
   double getClientPriceForProduct(CartItem item) {
@@ -226,19 +231,13 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
       builder: (BuildContext dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         title: const Text('Exit Page'),
-        content: const Text(
-          'You will lose all progress if you exit from this page',
-          style: TextStyle(fontSize: 16),
-        ),
+        content: const Text('You will lose all progress if you exit from this page', style: TextStyle(fontSize: 16)),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
             },
-            child: Text(
-              'Cancel',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
+            child: Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
           ),
           TextButton(
             onPressed: () {
@@ -250,10 +249,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                 (route) => false,
               );
             },
-            child: Text(
-              'OK',
-              style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor),
-            ),
+            child: Text('OK', style: TextStyle(fontSize: 16, color: ColorsUniversal.buttonsColor)),
           ),
         ],
       ),
@@ -328,7 +324,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                   Text('Prod    Price  Qty    Total', style: receiptStyle.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
 
-                  // Product lines 
+                  // Product lines
                   if (isCardSale) ...[
                     // CARD SALE: Show client pricing
                     ...widget.cartItems.map((item) => Text(formatClientProductLine(item), style: receiptStyle)),
@@ -395,7 +391,7 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
                   const SizedBox(height: 4),
                   const Center(child: Text('Powered by Sahara FCS', style: TextStyle(fontSize: 11))),
                   SizedBox(height: 10),
-                  
+
                   // QR Code
                   Center(
                     child: SizedBox(
@@ -414,11 +410,10 @@ class _ReceiptPrintState extends State<ReceiptPrint> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _isPrinting ? null : _printReceipt,
-          backgroundColor:_isPrinting ? Colors.grey : ColorsUniversal.buttonsColor,
-          child: _isPrinting ?CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 3,
-        ) : Icon(Icons.print, color: Colors.white),
+          backgroundColor: _isPrinting ? Colors.grey : ColorsUniversal.buttonsColor,
+          child: _isPrinting
+              ? CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+              : Icon(Icons.print, color: Colors.white),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),

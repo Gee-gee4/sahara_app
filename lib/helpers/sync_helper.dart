@@ -13,6 +13,9 @@ Future<void> fullResourceSync({
 }) async {
   final prefs = await SharedPreferences.getInstance();
 
+  bool allSuccessful = true;
+  String errorMessage = '';
+
   // Channel
   final channelResponse = await ChannelService.fetchChannelByDeviceId(deviceId);
   if (channelResponse.isSuccessfull && channelResponse.body != null) {
@@ -22,25 +25,57 @@ Future<void> fullResourceSync({
     await prefs.setBool('staffAutoLogOff', channel.staffAutoLogOff);
     await prefs.setInt('noOfDecimalPlaces', channel.noOfDecimalPlaces);
     await prefs.setInt('channelId', channel.channelId);
+  } else {
+    allSuccessful = false;
+    errorMessage = 'Channel: ${channelResponse.message}';
+  }
+
+  // Only continue if channel sync was successful
+  if (!allSuccessful) {
+    throw Exception(errorMessage);
   }
 
   // Payment modes
-  final acceptedModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
-  final modeBox = Hive.box('payment_modes');
-  await modeBox.put('acceptedModes', acceptedModes.map((m) => m.toJson()).toList());
+  final acceptedModesResponse = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
+  if (acceptedModesResponse.isSuccessfull) {
+    final modeBox = Hive.box('payment_modes');
+    await modeBox.put('acceptedModes', acceptedModesResponse.body.map((m) => m.toJson()).toList());
+  } else {
+    allSuccessful = false;
+    errorMessage = 'Payment Modes: ${acceptedModesResponse.message}';
+  }
 
   // Rewards
-  final rewards = await RedeemRewardsService.fetchRedeemRewards();
-  final rewardsBox = Hive.box('redeem_rewards');
-  await rewardsBox.put('rewardsList', rewards.map((r) => r.toJson()).toList());
+  final rewardsResponse = await RedeemRewardsService.fetchRedeemRewards();
+  if (rewardsResponse.isSuccessfull) {
+    final rewardsBox = Hive.box('redeem_rewards');
+    await rewardsBox.put('rewardsList', rewardsResponse.body.map((r) => r.toJson()).toList());
+  } else {
+    allSuccessful = false;
+    errorMessage = 'Rewards: ${rewardsResponse.message}';
+  }
 
   // Staff
-  final staffList = await StaffListService.fetchStaffList(deviceId);
-  final staffBox = Hive.box('staff_list');
-  await staffBox.put('staffList', staffList.body.map((e) => e.toJson()).toList());
+  final staffListResponse = await StaffListService.fetchStaffList(deviceId);
+  if (staffListResponse.isSuccessfull) {
+    final staffBox = Hive.box('staff_list');
+    await staffBox.put('staffList', staffListResponse.body.map((e) => e.toJson()).toList());
+  } else {
+    allSuccessful = false;
+    errorMessage = 'Staff: ${staffListResponse.message}';
+  }
 
   // Products
-  final products = await ProductService.fetchProductItems(deviceId);
-  final productsBox = Hive.box('products');
-  await productsBox.put('productItems', products.map((p) => p.toJson()).toList());
+  final productsResponse = await ProductService.fetchProductItems(deviceId);
+  if (productsResponse.isSuccessfull) {
+    final productsBox = Hive.box('products');
+    await productsBox.put('productItems', productsResponse.body.map((p) => p.toJson()).toList());
+  } else {
+    allSuccessful = false;
+    errorMessage = 'Products: ${productsResponse.message}';
+  }
+
+  if (!allSuccessful) {
+    throw Exception(errorMessage);
+  }
 }

@@ -1,22 +1,22 @@
 // lib/services/sale_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/helpers/device_id_helper.dart';
+import 'package:sahara_app/helpers/response_model.dart';
+import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 import 'package:sahara_app/models/product_card_details_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 
 class SaleService {
-  //  static Future<String?> get baseUrl async {
-  //   final url = await apiUrl();
-  //   if (url == null) {
-  //     return null;
-  //   }
-  //   return '$url/api';
-  // }
-  static const String baseUrl = 'https://cmb.saharafcs.com/api';
+  static Future<String?> get baseUrl async {
+    final url = await apiUrl(); 
+    if (url == null) return null;
+    return '$url/api';
+  }
 
-  static Future<Map<String, dynamic>> completeSale({
+  static Future<ResponseModel<Map<String, dynamic>?>> completeSale({
     required String refNumber,
     required List<CartItem> cartItems,
     required StaffListModel user,
@@ -37,6 +37,16 @@ class SaleService {
     String? paymentModeName,
   }) async {
     try {
+      // Get dynamic base URL
+      final base = await baseUrl;
+      if (base == null) {
+        return ResponseModel(
+          isSuccessfull: false, 
+          message: 'Base URL not set in preferences', 
+          body: null
+        );
+      }
+
       // Determine if we have card data (regardless of payment method)
       final hasCardData =
           customerUID != null && customerUID.isNotEmpty && customerAccountNo != null && customerAccountNo != 0;
@@ -46,6 +56,7 @@ class SaleService {
       print("💳 Has Card Data: $hasCardData");
       print("🆔 Card UID: $customerUID");
       print("🏦 Account No: $customerAccountNo");
+      
       // Helper function to get client price for card sales
       double getClientPrice(CartItem item) {
         if (!isCardSale || accountProducts == null) {
@@ -112,6 +123,7 @@ class SaleService {
       print("💰 Total amount (before discount): $totalAmount");
       print("💰 Total discount: $totalDiscount");
       print("💰 Net total (after discount): $netTotal");
+      
       final deviceId = await getSavedOrFetchDeviceId();
       final saleData = {
         "terminalName": deviceId,
@@ -156,19 +168,17 @@ class SaleService {
       print('📋 Sale Type: ${isCardSale ? "CARD" : "CASH"}');
       print('💳 Account No: ${saleData["accountNo"]}');
       print('🆔 Card UID: ${saleData["cardUID"]}');
-      // print('💰 Payment Mode: ${saleData["paymentList"][0]["paymentModeId"]} (${saleData["paymentList"][0]["paymentModeName"]})');
       print('🏪 Terminal: ${saleData["terminalName"]}');
       print('👤 Staff ID: ${saleData["staffId"]}');
       print('📄 Full JSON: ${jsonEncode(saleData)}');
 
-      final endpoint = '$baseUrl/SellComplete';
-print('🛒 Completing sale...');
-print('🌐 URL: $endpoint');
-print('📦 Payload: ${jsonEncode(saleData)}');
-
+      final endpoint = '$base/SellComplete';
+      print('🛒 Completing sale...');
+      print('🌐 URL: $endpoint');
+      print('📦 Payload: ${jsonEncode(saleData)}');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/SellComplete'),
+        Uri.parse(endpoint),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -184,14 +194,35 @@ print('📦 Payload: ${jsonEncode(saleData)}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         print('✅ Sale completed successfully');
-        return {'success': true, 'data': responseData};
+        return  ResponseModel(
+          isSuccessfull: true,
+          message: 'Sale completed successfully',
+          body: responseData
+        );
       } else {
         print('❌ Sale completion failed: ${response.statusCode}');
-        return {'success': false, 'error': 'Failed to complete sale: ${response.statusCode}', 'details': response.body};
+        return ResponseModel(
+          isSuccessfull: false,
+          message: 'Failed to complete sale: ${response.statusCode} - ${response.body}',
+          body: null
+        );
       }
-    } catch (e) {
+    } 
+     on SocketException catch (_) {
+      print('❌ No Internet Connectivity for sale completion');
+      return ResponseModel(
+        isSuccessfull: false,
+        message: 'No Internet Connectivity',
+        body: null
+      );
+    } 
+    catch (e) {
       print('❌ Error completing sale: $e');
-      return {'success': false, 'error': 'Network error: $e'};
+      return ResponseModel(
+        isSuccessfull: false,
+        message: 'Error: ${e.toString()}',
+        body: null
+      );
     }
   }
 }

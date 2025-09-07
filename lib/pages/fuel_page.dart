@@ -6,6 +6,7 @@ import 'package:sahara_app/modules/pumps_module.dart';
 import 'package:sahara_app/pages/transaction_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/pump_card.dart';
+import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class FuelPage extends StatefulWidget {
   const FuelPage({super.key, required this.user});
@@ -19,17 +20,60 @@ class _FuelPageState extends State<FuelPage> {
   final PumpsModule _pumpsModule = PumpsModule();
   List<PumpModel> pumps = [];
   bool isLoading = false;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    isLoading = true;
-    _pumpsModule.fetchPumps().then((ps) {
-      setState(() {
-        isLoading = false;
-        pumps = ps;
-      });
+    _loadPumps();
+  }
+
+  Future<void> _loadPumps() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
     });
+
+    final response = await _pumpsModule.fetchPumps();
+
+    setState(() {
+      isLoading = false;
+
+      if (response.isSuccessfull) {
+        pumps = response.body;
+      } else {
+        errorMessage = response.message;
+        pumps = []; // Clear pumps on error
+      }
+    });
+
+    // Show error dialog if there's an error
+    if (errorMessage != null && errorMessage!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showErrorDialog(errorMessage!);
+      });
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+          if (message.contains('No Internet Connectivity'))
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _loadPumps(); // Retry
+              },
+              child: const Text('Retry'),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -90,6 +134,23 @@ class _FuelPageState extends State<FuelPage> {
                 },
               ),
             )
+          : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    errorMessage!,
+                    style: TextStyle(fontSize: 16, color: ColorsUniversal.appBarColor),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(height: 40, width: 95, child: myButton(context, _loadPumps, 'Retry')),
+                ],
+              ),
+            )
+          : pumps.isEmpty
+          ? const Center(child: Text('No pumps available', style: TextStyle(fontSize: 16)))
           : GridView.builder(
               itemCount: pumps.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

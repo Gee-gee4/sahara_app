@@ -23,7 +23,6 @@ class SyncItemsPage extends StatefulWidget {
 }
 
 class _SyncItemsPageState extends State<SyncItemsPage> {
-
   final List<_SyncItem> syncItems = [
     _SyncItem(label: 'Channel', icon: Icons.device_hub, syncMethod: 'channel'),
     _SyncItem(label: 'Products', icon: Icons.shopping_bag, syncMethod: 'products'),
@@ -72,11 +71,26 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
             await prefs.setInt('noOfDecimalPlaces', channel.noOfDecimalPlaces);
             await prefs.setInt('channelId', channel.channelId);
           } else {
+            if (!channelResponse.isSuccessfull) {
+              showDialog(
+                context: context,
+                builder: (_) => Dialog(child: Text(channelResponse.message)),
+              );
+              return;
+            }
             throw Exception('Channel not found');
           }
           break;
         case 'products':
-          final products = await ProductService.fetchProductItems(deviceId);
+          final productsRes = await ProductService.fetchProductItems(deviceId);
+          if (!productsRes.isSuccessfull) {
+            showDialog(
+              context: context,
+              builder: (_) => Dialog(child: Text(productsRes.message)),
+            );
+            return;
+          }
+          final products = productsRes.body;
           final productsBox = Hive.box('products');
           final productsAsMaps = products.map((p) => p.toJson()).toList();
           await productsBox.put('productItems', productsAsMaps);
@@ -84,8 +98,11 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
 
         case 'staff':
           final newStaffListRes = await StaffListService.fetchStaffList(deviceId);
-          if(!newStaffListRes.isSuccessfull){
-            showDialog(context: context, builder: (_)=> Dialog(child: Text(newStaffListRes.message),));
+          if (!newStaffListRes.isSuccessfull) {
+            showDialog(
+              context: context,
+              builder: (_) => Dialog(child: Text(newStaffListRes.message)),
+            );
             return;
           }
           final newStaffList = newStaffListRes.body;
@@ -95,14 +112,30 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
           break;
 
         case 'payment_modes':
-          final acceptedModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
+          final acceptedModesRes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
+          if (!acceptedModesRes.isSuccessfull) {
+            showDialog(
+              context: context,
+              builder: (_) => Dialog(child: Text(acceptedModesRes.message)),
+            );
+            return;
+          }
+          final acceptedModes = acceptedModesRes.body;
           final modeBox = Hive.box('payment_modes');
           final modesAsMaps = acceptedModes.map((m) => m.toJson()).toList();
           await modeBox.put('acceptedModes', modesAsMaps);
           break;
 
         case 'rewards':
-          final rewards = await RedeemRewardsService.fetchRedeemRewards();
+          final rewardsRes = await RedeemRewardsService.fetchRedeemRewards();
+          if (!rewardsRes.isSuccessfull) {
+            showDialog(
+              context: context,
+              builder: (_) => Dialog(child: Text(rewardsRes.message)),
+            );
+            return;
+          }
+          final rewards = rewardsRes.body;
           final rewardsBox = Hive.box('redeem_rewards');
           final rewardsAsMaps = rewards.map((r) => r.toJson()).toList();
           await rewardsBox.put('rewardsList', rewardsAsMaps);
@@ -167,6 +200,7 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
                 print('📱 Device ID used for sync: $deviceId');
 
                 await fullResourceSync(deviceId: deviceId, context: context);
+
                 if (!mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -176,8 +210,6 @@ class _SyncItemsPageState extends State<SyncItemsPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     behavior: SnackBarBehavior.floating,
                     duration: const Duration(seconds: 2),
-                    // content: Text('All resources synced successfully'),
-                    // behavior: SnackBarBehavior.floating,
                   ),
                 );
               } catch (e) {

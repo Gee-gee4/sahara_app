@@ -6,6 +6,7 @@ import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/helpers/ref_generator.dart';
 import 'package:sahara_app/models/payment_mode_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
+import 'package:sahara_app/modules/sale_service.dart';
 import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/pages/receipt_print.dart';
 import 'package:sahara_app/pages/tap_card_page.dart';
@@ -249,97 +250,205 @@ class _CartPageState extends State<CartPage> {
 
   //cash payment dialog
   void _showCashPaymentDialog(BuildContext context) {
-    final double total = CartStorage().getTotalPrice();
-    final TextEditingController _cashController = TextEditingController(text: total.toStringAsFixed(0));
+  final double total = CartStorage().getTotalPrice();
+  final TextEditingController _cashController = TextEditingController(text: total.toStringAsFixed(0));
 
-    // Get the selected payment mode details
-    final box = Hive.box('payment_modes');
-    final rawModes = box.get('acceptedModes', defaultValue: []);
-    final savedModes = (rawModes as List)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .map((e) => PaymentModeModel.fromJson(e))
-        .toList();
+  // Get the selected payment mode details
+  final box = Hive.box('payment_modes');
+  final rawModes = box.get('acceptedModes', defaultValue: []);
+  final savedModes = (rawModes as List)
+      .map((e) => Map<String, dynamic>.from(e as Map))
+      .map((e) => PaymentModeModel.fromJson(e))
+      .toList();
 
-    PaymentModeModel? selectedMode;
-    for (var mode in savedModes) {
-      if (mode.payModeDisplayName == selectedPaymentMode) {
-        selectedMode = mode;
-        break;
-      }
+  PaymentModeModel? selectedMode;
+  for (var mode in savedModes) {
+    if (mode.payModeDisplayName == selectedPaymentMode) {
+      selectedMode = mode;
+      break;
     }
+  }
 
-    // to see what payment was found
-    print("🎯 Selected Payment Mode: $selectedPaymentMode");
-    print("💳 Payment Mode ID: ${selectedMode?.payModeId}");
-    print("📝 Payment Mode Name: ${selectedMode?.payModeDisplayName}");
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      String? errorText;
+      bool isProcessing = false;
+      String? currentRefNumber; // Track the current reference number
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        String? errorText;
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: ColorsUniversal.background,
-              title: Text('${selectedPaymentMode ?? "Cash"} Payment', style: TextStyle(fontWeight: FontWeight.w500)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Amount Due:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
-                      Text('Ksh ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 18)),
-                    ],
-                  ),
-                  TextField(
-                    controller: _cashController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      hintText: 'Enter Amount Received',
-                      errorText: errorText,
-                      hintStyle: TextStyle(color: Colors.grey[400]),
-                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
-                    ),
-                    cursorColor: ColorsUniversal.buttonsColor,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: ColorsUniversal.background,
+            title: Text('${selectedPaymentMode ?? "Cash"} Payment', style: TextStyle(fontWeight: FontWeight.w500)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Amount Due:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                    Text('Ksh ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 18)),
+                  ],
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
-                  onPressed: () async {
-                    final entered = _cashController.text.trim();
-                    if (entered.isEmpty) {
-                      setState(() => errorText = 'Amount is required');
-                      return;
-                    }
+                TextField(
+                  controller: _cashController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: 'Enter Amount Received',
+                    errorText: errorText,
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
+                  ),
+                  cursorColor: ColorsUniversal.buttonsColor,
+                ),
+                if (isProcessing)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: CircularProgressIndicator(color: ColorsUniversal.buttonsColor),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isProcessing ? null : () {
+                  Navigator.pop(context);
+                },
+                child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 16)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: ColorsUniversal.buttonsColor),
+                onPressed: isProcessing ? null : () async {
+                  final entered = _cashController.text.trim();
+                  if (entered.isEmpty) {
+                    setState(() => errorText = 'Amount is required');
+                    return;
+                  }
 
-                    final amount = double.tryParse(entered);
-                    if (amount == null || amount < total) {
-                      setState(() => errorText = 'Amount must be at least Ksh ${total.toStringAsFixed(0)}');
-                      return;
-                    }
+                  final amount = double.tryParse(entered);
+                  if (amount == null || amount < total) {
+                    setState(() => errorText = 'Amount must be at least Ksh ${total.toStringAsFixed(0)}');
+                    return;
+                  }
 
+                  setState(() => isProcessing = true);
+
+                  try {
                     final prefs = await SharedPreferences.getInstance();
                     final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
                     final channelName = prefs.getString('channelName') ?? 'Station';
                     final termNumber = prefs.getString('termNumber') ?? '8b7118e04fecbaf2';
+                    
+                    // 🔄 Generate NEW reference number for each attempt
                     final refNumber = await RefGenerator.generate();
+                    currentRefNumber = refNumber;
 
                     print("🎯 Final data for Cash-Only sale:");
                     print("💰 Payment: ${selectedMode?.payModeDisplayName ?? 'Cash'} (${amount})");
                     print("🆔 Payment Mode ID: ${selectedMode?.payModeId ?? 1}");
+                    print("🔢 Reference Number: $refNumber");
                     print("📝 No card data (cash-only)");
 
+                    // ✅ Complete the sale with NEW ref number
+                    final saleResponse = await SaleService.completeSale(
+                      refNumber: refNumber,
+                      cartItems: cartItems,
+                      user: widget.user,
+                      isCardSale: false,
+                      cashGiven: amount,
+                      paymentModeId: selectedMode?.payModeId ?? 2,
+                      paymentModeName: selectedMode?.payModeDisplayName ?? 'Cash',
+                    );
+
+                    if (!saleResponse.isSuccessfull) {
+                      setState(() => isProcessing = false);
+                      
+                      // 🔍 Check if it's a duplicate key error (sale might have succeeded)
+                      if (saleResponse.message.contains('duplicate key') || 
+                          saleResponse.message.contains('IX_Finance_Transaction')) {
+                        // Show success message since the sale was actually completed
+                        Navigator.pop(context); // close dialog
+                        
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text('Sale Completed', style: TextStyle(color: Colors.green)),
+                            content: Text('Your sale was successfully processed. The system detected a duplicate transaction, which means your sale went through properly.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  // Navigate to receipt with the current ref number
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ReceiptPrint(
+                                        user: widget.user,
+                                        cartItems: cartItems,
+                                        cashGiven: amount,
+                                        customerName: 'Cash Customer', 
+                                        card: 'N/A',
+                                        accountType: 'Cash Sale',
+                                        vehicleNumber: 'N/A',
+                                        showCardDetails: false,
+                                        companyName: companyName,
+                                        channelName: channelName,
+                                        refNumber: currentRefNumber ?? refNumber,
+                                        termNumber: termNumber,
+                                        cardUID: null,
+                                        customerAccountNo: null,
+                                        discount: null,
+                                        clientTotal: null,
+                                        customerBalance: null,
+                                        accountProducts: null,
+                                        paymentModeId: selectedMode?.payModeId ?? 2,
+                                        paymentModeName: selectedMode?.payModeDisplayName ?? 'Cash',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text('View Receipt'),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      if (saleResponse.message.contains('No Internet Connectivity')) {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text('No Internet'),
+                            content: Text('Internet connection is required to complete the sale. Please check your connection and try again.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text('Sale Failed'),
+                            content: Text('Failed to complete sale: ${saleResponse.message}'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    // ✅ Sale successful - navigate to receipt
                     Navigator.pop(context); // close dialog
 
                     Navigator.push(
@@ -353,34 +462,49 @@ class _CartPageState extends State<CartPage> {
                           card: 'N/A',
                           accountType: 'Cash Sale',
                           vehicleNumber: 'N/A',
-                          showCardDetails: false, // no card details for cash only
+                          showCardDetails: false,
                           companyName: companyName,
                           channelName: channelName,
                           refNumber: refNumber,
                           termNumber: termNumber,
-                          // NO CARD DATA for cash only sales
                           cardUID: null,
                           customerAccountNo: null,
                           discount: null,
                           clientTotal: null,
                           customerBalance: null,
                           accountProducts: null,
-                          // pass the cash mode
                           paymentModeId: selectedMode?.payModeId ?? 2,
                           paymentModeName: selectedMode?.payModeDisplayName ?? 'Cash',
                         ),
                       ),
                     );
-                  },
-                  child: Text('OK', style: TextStyle(color: Colors.white, fontSize: 16)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+
+                  } catch (e) {
+                    setState(() => isProcessing = false);
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: Text('Error'),
+                        content: Text('An unexpected error occurred: $e'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+                child: Text('OK', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {

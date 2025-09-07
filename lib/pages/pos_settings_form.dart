@@ -224,14 +224,14 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       // Fetch accepted payment modes for this device
                       final acceptedProductModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
                       print('✅ Accepted payment modes:');
-                      for (var mode in acceptedProductModes) {
+                      for (var mode in acceptedProductModes.body) {
                         print('  • ${mode.payModeDisplayName} (${mode.payModeCategory})');
                       }
 
                       // Fetch available redeem rewards
                       final redeemRewards = await RedeemRewardsService.fetchRedeemRewards();
                       print('✅ Redeem rewards found:');
-                      for (var reward in redeemRewards) {
+                      for (var reward in redeemRewards.body) {
                         print('  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})');
                       }
 
@@ -247,7 +247,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       final productItems = await ProductService.fetchProductItems(deviceId);
                       // Print product categories and variations
                       print('✅ Product categories fetched:');
-                      for (var category in productItems) {
+                      for (var category in productItems.body) {
                         print('📦 Category: ${category.productCategoryName}');
                         for (var product in category.products) {
                           print('   • Product: ${product.productName}');
@@ -290,13 +290,13 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                                     // Save payment modes to Hive
                                     final box = Hive.box('payment_modes');
-                                    final modesAsMaps = acceptedProductModes.map((mode) => mode.toJson()).toList();
+                                    final modesAsMaps = acceptedProductModes.body.map((mode) => mode.toJson()).toList();
                                     await box.put('acceptedModes', modesAsMaps);
                                     print('✅ Saved ${modesAsMaps.length} payment modes to Hive');
 
                                     // Save redeem rewards to Hive
                                     final rewardsBox = Hive.box('redeem_rewards');
-                                    final rewardsAsMaps = redeemRewards.map((r) => r.toJson()).toList();
+                                    final rewardsAsMaps = redeemRewards.body.map((r) => r.toJson()).toList();
                                     await rewardsBox.put('rewardsList', rewardsAsMaps);
                                     print('✅ Saved ${rewardsAsMaps.length} redeem rewards to Hive');
 
@@ -308,7 +308,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                                     // Save products to Hive
                                     final productsBox = Hive.box('products');
-                                    final productsAsMaps = productItems.map((p) => p.toJson()).toList();
+                                    final productsAsMaps = productItems.body.map((p) => p.toJson()).toList();
                                     await productsBox.put('productItems', productsAsMaps);
                                     print('✅ Saved ${productsAsMaps.length} product categories to Hive');
 

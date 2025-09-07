@@ -97,42 +97,68 @@ class NFCStatementService extends NFCBaseService {
       NFCBaseService.showLoadingSpinner(context);
       shouldDismissSpinner = true;
 
-      final result = await MiniStatementService.fetchMiniStatement(accountNumber: accountNo, user: user);
+      // 🔧 Handle ResponseModel properly
+      final statementResponse = await MiniStatementService.fetchMiniStatement(
+        accountNumber: accountNo, 
+        user: user
+      );
 
       if (!context.mounted) return NFCResult.error('Context not mounted');
 
       Navigator.of(context).pop();
       shouldDismissSpinner = false;
 
+      // Check if the API call was successful
+      if (!statementResponse.isSuccessfull) {
+        if (statementResponse.message.contains('No Internet Connectivity')) {
+          await NFCBaseService.showErrorDialog(
+            context,
+            'No Internet',
+            'Internet connection is required to fetch your mini statement.\n\nPlease check your connection.',
+          );
+          return NFCResult.error('No internet connectivity');
+        } else {
+          _showErrorMessage(context, statementResponse.message);
+          return NFCResult.error('Failed to fetch mini statement: ${statementResponse.message}');
+        }
+      }
+
+      // Extract the actual data from ResponseModel
+      final result = statementResponse.body;
+      if (result == null) {
+        _showErrorMessage(context, 'No data received from server');
+        return NFCResult.error('No data received from server');
+      }
+
+      // Get other required data
       final prefs = await SharedPreferences.getInstance();
       final companyName = prefs.getString('companyName') ?? 'SAHARA FCS';
-      print('////////////////////////////////////////////////$companyName');
       final channelName = prefs.getString('channelName') ?? 'Station';
       final deviceId = await getSavedOrFetchDeviceId();
       final refNumber = await RefGenerator.generate();
 
-      if (result['success']) {
-        // Navigate to mini statement page
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MiniStatementPage(
-              user: user,
-              accountDetails: result['accountDetails'],
-              transactions: result['transactions'],
-              channelName: channelName,
-              companyName: companyName,
-              termNumber: deviceId,
-              refNumber: refNumber,
-            ),
-          ),
-        );
+      print('✅ Mini statement fetched successfully');
+      print('📊 Company: $companyName');
+      print('🏪 Channel: $channelName');
 
-        return NFCResult.success('Mini statement retrieved successfully', data: result);
-      } else {
-        _showErrorMessage(context, result['error']);
-        return NFCResult.error('Failed to fetch mini statement: ${result['error']}');
-      }
+      // Navigate to mini statement page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MiniStatementPage(
+            user: user,
+            accountDetails: result['accountDetails'],
+            transactions: result['transactions'],
+            channelName: channelName,
+            companyName: companyName,
+            termNumber: deviceId,
+            refNumber: refNumber,
+          ),
+        ),
+      );
+
+      return NFCResult.success('Mini statement retrieved successfully', data: result);
+
     } catch (e) {
       await FlutterNfcKit.finish();
 
@@ -170,9 +196,13 @@ class NFCStatementService extends NFCBaseService {
   }
 
   static void _showErrorMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.grey, duration: Duration(seconds: 2)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message), 
+        backgroundColor: Colors.grey, 
+        duration: Duration(seconds: 2)
+      )
+    );
     Navigator.of(context).pop();
   }
 

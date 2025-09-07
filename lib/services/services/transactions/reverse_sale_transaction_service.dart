@@ -46,7 +46,8 @@ class ReverseSaleTransactionService extends TransactionBaseService {
       // Show loading spinner
       NFCBaseService.showLoadingSpinner(context);
 
-      final result = await OriginalReverseSaleService.ReverseSaleService.reverseTransaction(
+      // 🔧 Handle ResponseModel properly  
+      final reversalResponse = await OriginalReverseSaleService.ReverseSaleService.reverseTransaction(
         originalRefNumber: receiptNumber,
         user: user,
       );
@@ -54,39 +55,78 @@ class ReverseSaleTransactionService extends TransactionBaseService {
       // Hide loading spinner
       if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
 
-      if (result['success']) {
-        // Get device ID for the receipt
-        final deviceId = await getSavedOrFetchDeviceId();
-        
-        // Navigate to the ReverseSalePage instead of showing a dialog
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReverseSalePage(
-              user: user,
-              apiData: result['data'],
-              originalRefNumber: result['originalRefNumber'],
-              reversalRefNumber: result['newRefNumber'],
-              terminalName: deviceId,
+      // Check if the API call was successful
+      if (!reversalResponse.isSuccessfull) {
+        if (reversalResponse.message.contains('No Internet Connectivity')) {
+          // Show internet connectivity error dialog
+          await showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text('No Internet'),
+              content: Text('Internet is required to reverse the transaction. \n\nPlease check your connection.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('OK'),
+                ),
+              ],
             ),
-          ),
-        );
-        
-        return TransactionResult.success('Transaction reversed successfully', data: result);
-      } else {
-        // Show error in a snackbar instead of dialog
+          );
+          return TransactionResult.error('No internet connectivity');
+        } else {
+          // Show other API errors in snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed! ${reversalResponse.message}'),
+              backgroundColor: Colors.grey,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return TransactionResult.error(reversalResponse.message);
+        }
+      }
+
+      // Extract the actual data from ResponseModel
+      final result = reversalResponse.body;
+      if (result == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed! ${result['error']}'),
+            content: Text('No data received from server'),
             backgroundColor: Colors.grey,
             duration: Duration(seconds: 3),
           ),
         );
-        return TransactionResult.error(result['error']);
+        return TransactionResult.error('No data received from server');
       }
+
+      // Success! Navigate to reverse sale receipt page
+      final deviceId = await getSavedOrFetchDeviceId();
+      
+      print('✅ Transaction reversed successfully');
+      print('📄 Original Ref: ${result['originalRefNumber']}');
+      print('🆕 New Ref: ${result['newRefNumber']}');
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReverseSalePage(
+            user: user,
+            apiData: result['data'],
+            originalRefNumber: result['originalRefNumber'],
+            reversalRefNumber: result['newRefNumber'],
+            terminalName: deviceId,
+          ),
+        ),
+      );
+      
+      return TransactionResult.success('Transaction reversed successfully', data: result);
+
     } catch (e) {
       // Hide loading spinner if it's still showing
       if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      
+      print('❌ Unexpected error in reverse sale: $e');
       
       // Show error in a snackbar
       ScaffoldMessenger.of(context).showSnackBar(

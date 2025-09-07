@@ -420,6 +420,7 @@ class _CartPageState extends State<CartPage> {
                         showDialog(
                           context: context,
                           builder: (_) => AlertDialog(
+                            backgroundColor: Colors.white,
                             title: Text('No Internet'),
                             content: Text('Internet connection is required to complete the sale. Please check your connection and try again.'),
                             actions: [

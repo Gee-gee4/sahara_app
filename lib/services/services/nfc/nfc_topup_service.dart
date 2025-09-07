@@ -150,7 +150,8 @@ class NFCTopUpService extends NFCBaseService {
       NFCBaseService.showLoadingSpinner(context);
       shouldDismissSpinner = true;
 
-      final result = await TopUpService.processTopUp(
+      // 🔧 Handle ResponseModel properly
+      final topUpResponse = await TopUpService.processTopUp(
         accountNo: accountNo,
         topUpAmount: topUpAmount,
         user: user,
@@ -162,33 +163,57 @@ class NFCTopUpService extends NFCBaseService {
       Navigator.of(context).pop();
       shouldDismissSpinner = false;
 
-      if (result['success']) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => TopUpPage(
-              user: user,
-              accountNo: accountNo,
-              staff: user,
-              topUpData: result['data'],
-              refNumber: result['refNumber'],
-              termNumber: deviceId,
-              amount: result['amount'],
-            ),
-          ),
-        );
-        
-        return NFCResult.success('Top-up completed successfully', data: result);
-      } else {
-        print("❌ Top-up failed: ${result['error']}");
-        
+      // Check if the API call was successful
+      if (!topUpResponse.isSuccessfull) {
+        if (topUpResponse.message.contains('No Internet Connectivity')) {
+          await NFCBaseService.showErrorDialog(
+            context,
+            'No Internet',
+            'Internet is required to process the top-up.\n\n Please check your connection.',
+          );
+          return NFCResult.error('No internet connectivity');
+        } else {
+          print("❌ Top-up failed: ${topUpResponse.message}");
+          
+          await NFCBaseService.showErrorDialog(
+            context,
+            'Top-Up Failed',
+            'Top-up could not be completed.\n\n${topUpResponse.message}',
+          );
+          
+          return NFCResult.error('Top-up failed: ${topUpResponse.message}');
+        }
+      }
+
+      // Extract the actual data from ResponseModel
+      final result = topUpResponse.body;
+      if (result == null) {
         await NFCBaseService.showErrorDialog(
           context,
-          'Top-Up Failed',
-          'Top-up could not be completed.\n\n${result['error']}',
+          'Error',
+          'No data received from server after successful top-up.',
         );
-        
-        return NFCResult.error('Top-up failed: ${result['error']}');
+        return NFCResult.error('No data received from server');
       }
+
+      // Success! Navigate to top-up receipt page
+      print("✅ Top-up completed successfully");
+      
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TopUpPage(
+            user: user,
+            accountNo: accountNo,
+            staff: user,
+            topUpData: result['data'],
+            refNumber: result['refNumber'],
+            termNumber: deviceId,
+            amount: result['amount'],
+          ),
+        ),
+      );
+      
+      return NFCResult.success('Top-up completed successfully', data: result);
 
     } catch (e) {
       await FlutterNfcKit.finish();

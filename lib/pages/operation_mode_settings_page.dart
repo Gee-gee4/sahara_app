@@ -1,5 +1,6 @@
 // lib/pages/operation_mode_settings_page.dart
 import 'package:flutter/material.dart';
+import 'package:sahara_app/helpers/cart_storage.dart';
 import 'package:sahara_app/pages/pos_settings_helper.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/color_hex.dart';
@@ -36,7 +37,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
     super.initState();
     _loadCurrentMode();
     _loadAutoModeSettings();
-    
+
     // listeners to text controllers
     _urlController.addListener(_onTextFieldChanged);
     _stationNameController.addListener(_onTextFieldChanged);
@@ -62,7 +63,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       _originalUrl = settings['url'] ?? '';
       _originalStationName = settings['stationName'] ?? '';
       _originalFetchingTime = settings['fetchingTime'] ?? '';
-      
+
       _urlController.text = _originalUrl;
       _stationNameController.text = _originalStationName;
       _fetchingTimeController.text = _originalFetchingTime;
@@ -70,7 +71,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
   }
 
   bool get _hasModeChanged => _currentMode != _newMode;
-  
+
   bool get _hasSettingsChanged =>
       _urlController.text.trim() != _originalUrl ||
       _stationNameController.text.trim() != _originalStationName ||
@@ -123,10 +124,8 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
 
         // Navigate to UsersPage and clear the entire navigation stack
         if (context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => UsersPage()),
-            (route) => false,
-          );
+          Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => UsersPage()), (route) => false);
+          CartStorage().clearCart();
         }
       } else {
         // Only settings changed save without logout
@@ -153,12 +152,9 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       }
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save settings'),
-          backgroundColor: Colors.grey,
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save settings'), backgroundColor: Colors.grey));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -261,8 +257,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                     ),
 
                     // Show auto mode settings when auto is selected or when current mode is auto
-                    if (_newMode == OperationMode.auto || _currentMode == OperationMode.auto) 
-                      _buildAutoModeSettings(),
+                    if (_newMode == OperationMode.auto || _currentMode == OperationMode.auto) _buildAutoModeSettings(),
 
                     if (_hasAnyChanges) ...[
                       SizedBox(height: 16),
@@ -279,9 +274,9 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _hasModeChanged 
-                                  ? 'Changing operation mode will require you to log in again for optimal performance.'
-                                  : 'Settings changes will be saved and applied immediately.',
+                                _hasModeChanged
+                                    ? 'Changing operation mode will require you to log in again for optimal performance.'
+                                    : 'Settings changes will be saved and applied immediately.',
                                 style: TextStyle(color: ColorsUniversal.buttonsColor),
                               ),
                             ),
@@ -337,7 +332,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
     _urlController.removeListener(_onTextFieldChanged);
     _stationNameController.removeListener(_onTextFieldChanged);
     _fetchingTimeController.removeListener(_onTextFieldChanged);
-    
+
     _urlController.dispose();
     _stationNameController.dispose();
     _fetchingTimeController.dispose();

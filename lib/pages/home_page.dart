@@ -210,135 +210,170 @@ class _HomePageState extends State<HomePage> {
     Container(),
   ];
 
+  Future<bool> _showLogoutConfirmation() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: ColorsUniversal.background,
+          title: Text('LOG OUT'),
+          content: Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ColorsUniversal.background,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(widget.user.staffName, style: TextStyle(color: Colors.white70)),
-        centerTitle: true,
-        backgroundColor: ColorsUniversal.appBarColor,
-        iconTheme: IconThemeData(color: Colors.white70),
-        actions: [
-          // ADVANCED DROPDOWN
-          PopupMenuButton<String>(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: ColorsUniversal.background,
-            icon: Icon(Icons.build_circle_outlined, color: Colors.white70, size: 28),
-            onSelected: (value) {
-              if (value == 'sync') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const SyncItemsPage()));
-              } else if (value == 'operation_mode') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => OperationModeSettingsPage()));
-              } else if (value == 'receipt_settings') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const BasicPosSettingsPage()));
-              } else if (value == 'cloud') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => CloudSettings()));
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'sync', child: Text('Sync Items')),
-              PopupMenuItem(value: 'operation_mode', child: Text('Advanced Settings')),
-              PopupMenuItem(value: 'receipt_settings', child: Text('Pos Settings')),
-              PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
-            ],
-          ),
-
-          // LOGOUT ICON BUTTON
-          IconButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    backgroundColor: ColorsUniversal.background,
-                    title: Text('LOG OUT'),
-                    content: Text('Are you sure you want to log out?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text('Cancel', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
-                      ),
-                      TextButton(
-                        child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
-                        onPressed: () {
-                          Navigator.pop(context);
-
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (_) => UsersPage()),
-                            (route) => false, // Remove all previous routes
-                          );
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-            icon: Icon(Icons.logout, color: Colors.white70),
-          ),
-        ],
-      ),
-
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: ConvexAppBar(
-        backgroundColor: ColorsUniversal.fillWids,
-        activeColor: ColorsUniversal.buttonsColor,
-        color: Colors.white70,
-        style: TabStyle.react, 
-        curveSize: 70,
-        items: const [
-          TabItem(icon: Icons.home, title: 'Home'),
-          TabItem(icon: Icons.list_alt, title: 'Products'),
-          TabItem(icon: Icons.settings, title: 'Settings'),
-          TabItem(icon: Icons.nfc, title: 'Details'),
-        ],
-        initialActiveIndex: _selectedIndex,
-        onTap: (index) {
+    return PopScope(
+      canPop: false, // Prevent default back behavior
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        
+        // If we're on Products or Settings tab, navigate to Home instead of logging out
+        if (_selectedIndex == 1 || _selectedIndex == 2) {
           setState(() {
-            _selectedIndex = index;
-
-            if (index == 0) {
-              _activeCategoryPage = null;
-            }
-
-            // Handle NFC tab tap navigate directly to TapCardPage
-            if (index == 3) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.cardDetails),
-                ),
-              ).then((_) {
-                // After returning from NFC page, reset to home tab
-                setState(() {
-                  _selectedIndex = 0; // Return to home tab
-                });
-              });
-            }
+            _selectedIndex = 0;
+            _activeCategoryPage = null;
           });
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => CartPage(user: widget.user)),
-          ).then((_) => setState(() {})); // Refresh when coming back
-        },
-        backgroundColor: ColorsUniversal.buttonsColor,
-        child: Badge(
-          isLabelVisible: cartStorage.cartItems.isNotEmpty,
-          label: Text('${cartStorage.cartItems.length}'),
-          offset: Offset(9, -9),
+          return;
+        }
+        
+        // If we're on Home tab, show logout confirmation
+        if (_selectedIndex == 0) {
+          final shouldLogout = await _showLogoutConfirmation();
+          if (shouldLogout) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => UsersPage()),
+              (route) => false,
+            );
+            CartStorage().clearCart();
+          }
+          return;
+        }
+      },
+      child: Scaffold(
+        backgroundColor: ColorsUniversal.background,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text(widget.user.staffName, style: TextStyle(color: Colors.white70)),
+          centerTitle: true,
           backgroundColor: ColorsUniversal.appBarColor,
-          child: const Icon(Icons.shopping_cart, color: Colors.white70),
-        ),
-      ),
+          iconTheme: IconThemeData(color: Colors.white70),
+          actions: [
+            // ADVANCED DROPDOWN
+            PopupMenuButton<String>(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: ColorsUniversal.background,
+              icon: Icon(Icons.build_circle_outlined, color: Colors.white70, size: 28),
+              onSelected: (value) {
+                if (value == 'sync') {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SyncItemsPage()));
+                } else if (value == 'operation_mode') {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => OperationModeSettingsPage()));
+                } else if (value == 'receipt_settings') {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BasicPosSettingsPage()));
+                } else if (value == 'cloud') {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => CloudSettings()));
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'sync', child: Text('Sync Items')),
+                PopupMenuItem(value: 'operation_mode', child: Text('Advanced Settings')),
+                PopupMenuItem(value: 'receipt_settings', child: Text('Pos Settings')),
+                PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
+              ],
+            ),
 
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            // LOGOUT ICON BUTTON
+            IconButton(
+              onPressed: () async {
+                final shouldLogout = await _showLogoutConfirmation();
+                if (shouldLogout) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => UsersPage()),
+                    (route) => false,
+                  );
+                  CartStorage().clearCart();
+                }
+              },
+              icon: Icon(Icons.logout, color: Colors.white70),
+            ),
+          ],
+        ),
+
+        body: _screens[_selectedIndex],
+        bottomNavigationBar: ConvexAppBar(
+          backgroundColor: ColorsUniversal.fillWids,
+          activeColor: ColorsUniversal.buttonsColor,
+          color: Colors.white70,
+          style: TabStyle.react,
+          curveSize: 70,
+          items: const [
+            TabItem(icon: Icons.home, title: 'Home'),
+            TabItem(icon: Icons.list_alt, title: 'Products'),
+            TabItem(icon: Icons.settings, title: 'Settings'),
+            TabItem(icon: Icons.nfc, title: 'Details'),
+          ],
+          initialActiveIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+
+              if (index == 0) {
+                _activeCategoryPage = null;
+              }
+
+              // Handle NFC tab tap navigate directly to TapCardPage
+              if (index == 3) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.cardDetails),
+                  ),
+                ).then((_) {
+                  // After returning from NFC page, reset to home tab
+                  setState(() {
+                    _selectedIndex = 0; // Return to home tab
+                  });
+                });
+              }
+            });
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CartPage(user: widget.user)),
+            ).then((_) => setState(() {})); // Refresh when coming back
+          },
+          backgroundColor: ColorsUniversal.buttonsColor,
+          child: Badge(
+            isLabelVisible: cartStorage.cartItems.isNotEmpty,
+            label: Text('${cartStorage.cartItems.length}'),
+            offset: Offset(9, -9),
+            backgroundColor: ColorsUniversal.appBarColor,
+            child: const Icon(Icons.shopping_cart, color: Colors.white70),
+          ),
+        ),
+
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      ),
     );
   }
 }

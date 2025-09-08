@@ -7,6 +7,7 @@ import 'package:sahara_app/modules/transaction_module.dart';
 import 'package:sahara_app/pages/cart_page.dart';
 import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
+import 'package:sahara_app/widgets/reusable_widgets.dart';
 
 class TransactionPage extends StatefulWidget {
   const TransactionPage({super.key, required this.pumpId, required this.user});
@@ -59,18 +60,18 @@ class _TransactionPageState extends State<TransactionPage> {
 
     setState(() {
       isFetching = false;
-      
+
       if (response.isSuccessfull) {
         transactions = response.body;
         nozzles = transactions.map((tx) => tx.nozzle).toSet().toList();
-        
+
         print('✅ TransactionPage: Loaded ${transactions.length} transactions');
         print('  Nozzles found: $nozzles');
       } else {
         errorMessage = response.message;
         transactions = [];
         nozzles = [];
-        
+
         // Show error dialog for internet connectivity issues
         if (errorMessage!.contains('No Internet Connectivity')) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -85,13 +86,11 @@ class _TransactionPageState extends State<TransactionPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Error'),
         content: Text(message),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
           if (message.contains('No Internet Connectivity'))
             TextButton(
               onPressed: () {
@@ -112,7 +111,7 @@ class _TransactionPageState extends State<TransactionPage> {
         : transactions.where((tx) => tx.nozzle == selectedNozzle).toList();
 
     return Scaffold(
-        extendBody: true,
+      extendBody: true,
       backgroundColor: ColorsUniversal.background,
       appBar: AppBar(
         iconTheme: IconThemeData(color: Colors.white70),
@@ -165,43 +164,36 @@ class _TransactionPageState extends State<TransactionPage> {
               ),
             )
           : errorMessage != null
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      errorMessage!,
-                      style: const TextStyle(fontSize: 16, color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: fetchAndSetTransactions,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-            : filteredTransactions.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.receipt_long, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'No transactions found',
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                      ),
-                      SizedBox(height: 8),
-                      Text('Try refreshing or check your time range', style: TextStyle(color: Colors.grey[500])),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    errorMessage!,
+                    style: TextStyle(fontSize: 16, color: ColorsUniversal.appBarColor),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : ListView.builder(
-                  itemCount: filteredTransactions.length,
-                  itemBuilder: (context, index) {
-
+                  const SizedBox(height: 20),
+                  SizedBox(height: 40, width: 95, child: myButton(context, fetchAndSetTransactions, 'Retry')),
+                ],
+              ),
+            )
+          : filteredTransactions.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.receipt_long, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No transactions found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                  SizedBox(height: 8),
+                  Text('Try refreshing or check your time range', style: TextStyle(color: Colors.grey[500])),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: filteredTransactions.length,
+              itemBuilder: (context, index) {
                 TransactionModel transaction = filteredTransactions[index];
                 return Stack(
                   children: [
@@ -318,9 +310,9 @@ class _TransactionPageState extends State<TransactionPage> {
                     ),
                   ],
                 );
-                  },
-                ),
-                  floatingActionButton: FloatingActionButton(
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,

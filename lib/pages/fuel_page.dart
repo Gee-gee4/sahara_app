@@ -59,6 +59,7 @@ class _FuelPageState extends State<FuelPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Error'),
         content: Text(message),
         actions: [

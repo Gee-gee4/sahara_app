@@ -54,7 +54,7 @@ Column reusableTextField(
 
 SizedBox myButton(
   BuildContext context,
-  Function onTap,
+  Function? onTap,
   String buttonText, {
   TextStyle buttonTextStyle = const TextStyle(color: Colors.white),
   bool isLoading = false,
@@ -69,7 +69,7 @@ SizedBox myButton(
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
-      onPressed: isLoading ? null : () => onTap(),
+      onPressed: isLoading ? null : () => onTap?.call(),
       child: isLoading
           ? Row(
               mainAxisSize: MainAxisSize.min,

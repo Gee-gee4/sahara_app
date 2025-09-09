@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sahara_app/models/permissions_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/tap_card_page.dart';
 import 'package:sahara_app/services/services/nfc/nfc_service_factory.dart';
@@ -14,15 +15,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-
   Future<void> _handleCardAction(TapCardAction action) async {
     if (action == TapCardAction.changePin) {
       // Use transaction service for PIN change
-      await TransactionServiceFactory.executeAction(
-        TransactionAction.changePin, 
-        context, 
-        widget.user
-      );
+      await TransactionServiceFactory.executeAction(TransactionAction.changePin, context, widget.user);
     } else if (action == TapCardAction.format) {
       // Show confirmation for format
       final confirmed = await _showFormatConfirmation();
@@ -53,50 +49,31 @@ class _SettingsPageState extends State<SettingsPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TapCardPage(
-              user: widget.user, 
-              action: TapCardAction.miniStatement
-            ),
+            builder: (context) => TapCardPage(user: widget.user, action: TapCardAction.miniStatement),
           ),
         );
         break;
-        
+
       case 'Top Up':
         // Use transaction service for top-up
-        await TransactionServiceFactory.executeAction(
-          TransactionAction.topUp, 
-          context, 
-          widget.user
-        );
+        await TransactionServiceFactory.executeAction(TransactionAction.topUp, context, widget.user);
         break;
-        
+
       case 'Reverse Top Up':
         // Use transaction service for reverse top-up
-        await TransactionServiceFactory.executeAction(
-          TransactionAction.reverseTopUp, 
-          context, 
-          widget.user
-        );
+        await TransactionServiceFactory.executeAction(TransactionAction.reverseTopUp, context, widget.user);
         break;
-        
+
       case 'Re-Print Sale':
         // Use transaction service for reprint
-        await TransactionServiceFactory.executeAction(
-          TransactionAction.reprintReceipt, 
-          context, 
-          widget.user
-        );
+        await TransactionServiceFactory.executeAction(TransactionAction.reprintReceipt, context, widget.user);
         break;
-        
+
       case 'Reverse Sale':
         // Use transaction service for reverse sale
-        await TransactionServiceFactory.executeAction(
-          TransactionAction.reverseSale, 
-          context, 
-          widget.user
-        );
+        await TransactionServiceFactory.executeAction(TransactionAction.reverseSale, context, widget.user);
         break;
-        
+
       default:
         print('Unknown transaction action: $actionName');
     }
@@ -104,45 +81,48 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<bool> _showFormatConfirmation() async {
     return await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Card Formating'),
-        content: const Text(
-          'Formating will erase all the user data on the card.\n\n'
-          'Are you sure you wish to proceed with formatting card?',
-          style: TextStyle(fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+          context: context,
+          builder: (_) => AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text('Card Formating'),
+            content: const Text(
+              'Formating will erase all the user data on the card.\n\n'
+              'Are you sure you wish to proceed with formatting card?',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('PROCEED', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('PROCEED', style: TextStyle(color: ColorsUniversal.buttonsColor)),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   @override
   Widget build(BuildContext context) {
     final List<String> cardItems = [
-      'Card Details', 
-      'Initialize Card', 
-      'Format Card', 
-      'Card UID', 
-      'Change Card Pin'
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canViewCustdataTerminal) == true) 'Card Details',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canInitializeCard) == true) 'Initialize Card',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canFormatCard) == true ||
+          globalCurrentUser?.hasPermission(PermissionsEnum.canFormatCorruptedCard) == true)
+        'Format Card',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canReadUid) == true) 'Card UID',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canChangeCardPin) == true) 'Change Card Pin',
     ];
     
     final List<String> transactionItems = [
-      'Ministatement',
-      'Top Up',
-      'Reverse Top Up',
-      'Re-Print Sale',
-      'Reverse Sale',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canPrintMiniStatement) == true) 'Ministatement',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canTopupTerminal) == true) 'Top Up',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canReverseTopup) == true) 'Reverse Top Up',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canReprintTicket) == true) 'Re-Print Sale',
+      if (globalCurrentUser?.hasPermission(PermissionsEnum.canReverseTransaction) == true) 'Reverse Sale',
     ];
 
     // Map card items to their corresponding TapCardActions
@@ -160,24 +140,18 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(15.0),
         child: ListView(
           children: [
-            Text('Card', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 10),
-            
+            if (cardItems.isNotEmpty) Text('Card', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+            if (cardItems.isNotEmpty) const SizedBox(height: 10),
+
             // Build card action tiles
-            ...cardItems.map((item) => _buildListTile(
-              item, 
-              () => _handleCardAction(cardActionMap[item]!)
-            )),
-            
-            const SizedBox(height: 20),
-            Text('Transactions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 10),
-            
+            ...cardItems.map((item) => _buildListTile(item, () => _handleCardAction(cardActionMap[item]!))),
+
+            if (cardItems.isNotEmpty) const SizedBox(height: 20),
+            if (transactionItems.isNotEmpty)Text('Transactions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+            if (transactionItems.isNotEmpty)const SizedBox(height: 10),
+
             // Build transaction action tiles
-            ...transactionItems.map((item) => _buildListTile(
-              item, 
-              () => _handleTransactionAction(item)
-            )),
+            ...transactionItems.map((item) => _buildListTile(item, () => _handleTransactionAction(item))),
           ],
         ),
       ),

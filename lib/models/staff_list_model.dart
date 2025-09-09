@@ -18,6 +18,11 @@ class StaffListModel {
   final String staffEmail;
   final List<PermissionsModel> permissions;
 
+  bool hasPermission(PermissionsEnum permission) {
+    // return false;
+    return permissions.where((item) => item.permissionName == permission).isNotEmpty;
+  }
+
   factory StaffListModel.fromJson(
     Map<String, dynamic> json, {
     List<PermissionsModel>? allPermission,
@@ -27,13 +32,9 @@ class StaffListModel {
     late final List<PermissionsModel> userPermissions;
     if (allPermission != null && rolePermisionsMap != null) {
       final List<int> userPermissionIds = rolePermisionsMap[roleId] ?? [];
-      userPermissions = allPermission
-          .where((perm) => userPermissionIds.contains(perm.id))
-          .toList();
+      userPermissions = allPermission.where((perm) => userPermissionIds.contains(perm.id)).toList();
     } else {
-      userPermissions = List<Map>.from(
-        json['permissions'] ?? [],
-      ).map((p) => PermissionsModel.fromJson(p)).toList();
+      userPermissions = List<Map>.from(json['permissions'] ?? []).map((p) => PermissionsModel.fromJson(p)).toList();
     }
 
     return StaffListModel(
@@ -57,3 +58,5 @@ class StaffListModel {
     'permissions': permissions.map((p) => p.toJson()).toList(),
   };
 }
+
+StaffListModel? globalCurrentUser;

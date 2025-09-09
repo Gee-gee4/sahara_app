@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/models/permissions_model.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/models/product_model.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/utils/color_hex.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
@@ -166,7 +168,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                 SizedBox(height: 6),
                                 myButton(
                                   context,
-                                  () {
+                                  !(globalCurrentUser?.hasPermission(PermissionsEnum.canSellTerminal) == true) ? null : () {
                                     showDialog(
                                       context: context,
                                       builder: (context) {

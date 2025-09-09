@@ -4,6 +4,7 @@ import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/models/permissions_model.dart';
 import 'package:sahara_app/models/product_category_model.dart';
 import 'package:sahara_app/models/staff_list_model.dart';
 import 'package:sahara_app/pages/basic_pos_settings_page.dart';
@@ -86,7 +87,7 @@ class _HomePageState extends State<HomePage> {
                     child: InkWell(
                       radius: 3,
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () {
+                      onTap: !widget.user.hasPermission(PermissionsEnum.canSellTerminal) ? null : () {
                         // Use the already loaded operation mode
                         print("Category tapped: ${category.productCategoryName}, Current mode: $_currentOperationMode");
 
@@ -235,6 +236,13 @@ class _HomePageState extends State<HomePage> {
     return result ?? false;
   }
 
+  bool get _hasSettingPermissions{
+    return (globalCurrentUser?.hasPermission(PermissionsEnum.canAccessSyncItems) == true) ||
+           (globalCurrentUser?.hasPermission(PermissionsEnum.canAccessAutoSettings) == true) ||
+           (globalCurrentUser?.hasPermission(PermissionsEnum.canAccessPosSettings) == true) ||
+           (globalCurrentUser?.hasPermission(PermissionsEnum.canAccessCloudSettings) == true) ;
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -253,6 +261,7 @@ class _HomePageState extends State<HomePage> {
         
         // If we're on Home tab, show logout confirmation
         if (_selectedIndex == 0) {
+          globalCurrentUser = null;
           final shouldLogout = await _showLogoutConfirmation();
           if (shouldLogout) {
             Navigator.pushAndRemoveUntil(
@@ -275,6 +284,7 @@ class _HomePageState extends State<HomePage> {
           iconTheme: IconThemeData(color: Colors.white70),
           actions: [
             // ADVANCED DROPDOWN
+            if(_hasSettingPermissions)
             PopupMenuButton<String>(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               color: ColorsUniversal.background,
@@ -290,11 +300,11 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => CloudSettings()));
                 }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'sync', child: Text('Sync Items')),
-                PopupMenuItem(value: 'operation_mode', child: Text('Advanced Settings')),
-                PopupMenuItem(value: 'receipt_settings', child: Text('Pos Settings')),
-                PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
+              itemBuilder: (context) => [
+                if((globalCurrentUser?.hasPermission(PermissionsEnum.canAccessSyncItems) == true)) PopupMenuItem(value: 'sync', child: Text('Sync Items')),
+                if((globalCurrentUser?.hasPermission(PermissionsEnum.canAccessAutoSettings) == true)) PopupMenuItem(value: 'operation_mode', child: Text('Advanced Settings')),
+                if((globalCurrentUser?.hasPermission(PermissionsEnum.canAccessPosSettings) == true)) PopupMenuItem(value: 'receipt_settings', child: Text('Pos Settings')),
+                if((globalCurrentUser?.hasPermission(PermissionsEnum.canAccessCloudSettings) == true)) PopupMenuItem(value: 'cloud', child: Text('Cloud Settings')),
               ],
             ),
 
@@ -331,6 +341,11 @@ class _HomePageState extends State<HomePage> {
           ],
           initialActiveIndex: _selectedIndex,
           onTap: (index) {
+            if(index == 3){
+              if(!(globalCurrentUser?.hasPermission(PermissionsEnum.canViewCustdataTerminal) == true)){
+                return;
+              }
+            }
             setState(() {
               _selectedIndex = index;
 

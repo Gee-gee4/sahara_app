@@ -72,6 +72,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               );
 
+              // set global user
+              globalCurrentUser = matchedUser;
+
               // Check against the invalid model instead of null
               if (matchedUser.staffId != -1) {
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(user: matchedUser)));

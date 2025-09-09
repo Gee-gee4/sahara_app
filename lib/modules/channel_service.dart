@@ -17,35 +17,65 @@ class ChannelService {
   }
 
   static Future<ResponseModel<ChannelModel?>> fetchChannelByDeviceId(String deviceId) async {
-    final url = Uri.parse('${await baseUrl}/ChannelDetails/$deviceId');
-
     try {
+      // 🔧 Fix: Check baseUrl for null before using it
+      final base = await baseUrl;
+      if (base == null) {
+        return ResponseModel(
+          isSuccessfull: false,
+          message: 'Base URL not configured',
+          body: null
+        );
+      }
+
+      final url = Uri.parse('$base/ChannelDetails/$deviceId');
+      print('🌐 Fetching channel for device: $deviceId');
+      print('🌐 URL: $url');
+
       final response = await http.get(url);
+      print('📡 API Response Status: ${response.statusCode}');
+      print('📡 API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
+        
+        // Check if the API returned an error in the response
+        if (json['error'] != null && json['error']['ErrorCode'] != 0) {
+          final errorMsg = json['error']['ErrorMsg'] ?? 'Unknown error';
+          return ResponseModel(
+            isSuccessfull: false,
+            message: errorMsg,
+            body: null
+          );
+        }
+
         return ResponseModel(
           isSuccessfull: true, 
-          message: '', 
-          body: ChannelModel.fromJson(json) // This should be ChannelModel, not ChannelModel?
+          message: 'Channel fetched successfully', 
+          body: ChannelModel.fromJson(json)
+        );
+      } else if (response.statusCode == 404) {
+        return ResponseModel(
+          isSuccessfull: false,
+          message: 'Device not registered in system',
+          body: null
         );
       } else {
         print('❌ API returned status code ${response.statusCode}');
         return ResponseModel(
           isSuccessfull: false, 
-          message: response.body, 
+          message: 'Failed to fetch channel: ${response.statusCode}', 
           body: null
         );
       }
-    } 
-    on SocketException catch (_){
+    } on SocketException catch (_) {
+      print('❌ No Internet Connectivity for channel fetch');
       return ResponseModel(
         isSuccessfull: false, 
         message: 'No Internet Connectivity', 
         body: null
       );
-    }
-    catch (e) {
+    } catch (e) {
       print('❌ Error fetching channel: $e');
       return ResponseModel(
         isSuccessfull: false, 

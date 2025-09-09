@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,15 @@ class PumpsModule {
       print('  Station Name: "$stationName" (length: ${stationName.length})');
       print('  baseTatsUrl: "$baseTatsUrl"');
 
+      // Check if station name is configured
+      if (stationName.isEmpty) {
+        return ResponseModel(
+          isSuccessfull: false, 
+          message: 'Station name not configured. Please check your settings.', 
+          body: []
+        );
+      }
+
       // fetch token
       String token = await _authModule.fetchToken();
       Map<String, String> headers = {'Content-type': 'application/json', 'authorization': 'Bearer $token'};
@@ -61,26 +71,82 @@ class PumpsModule {
       } else {
         print('  ❌ HTTP Error ${res.statusCode}: ${res.body}');
 
-        // ✅ Handle specific HTTP errors differently
+        // ✅ Handle specific HTTP errors with user-friendly messages
         String errorMessage;
-        if (res.statusCode == 502) {
+        if (res.statusCode == 404) {
+          errorMessage = 'Station "$stationName" not found. Please check your station name in settings.';
+        } else if (res.statusCode == 401) {
+          errorMessage = 'Authentication failed. Please check your login credentials.';
+        } else if (res.statusCode == 403) {
+          errorMessage = 'Access denied. You don\'t have permission to view pumps for this station.';
+        } else if (res.statusCode == 500) {
+          errorMessage = 'Server is experiencing issues. Please try again in a few minutes.';
+        } else if (res.statusCode == 502 || res.statusCode == 503) {
           errorMessage = 'Server is temporarily unavailable. Please try again later.';
+        } else if (res.statusCode == 504) {
+          errorMessage = 'Request timed out. Please check your connection and try again.';
         } else if (res.statusCode >= 500) {
-          errorMessage = 'Server error: ${res.statusCode}. Please try again later.';
-        } else if (res.statusCode == 401 || res.statusCode == 403) {
-          errorMessage = 'Authentication error: ${res.statusCode}. Please check your credentials.';
+          errorMessage = 'Server error. Please try again later.';
         } else {
-          errorMessage = 'Server returned error: ${res.statusCode}';
+          errorMessage = 'Unable to load pumps. Please try again.';
         }
         return ResponseModel(isSuccessfull: false, message: errorMessage, body: []);
       }
     } on SocketException catch (_) {
       print('  ❌ No Internet Connectivity');
-      return ResponseModel(isSuccessfull: false, message: 'No Internet Connectivity', body: []);
+      return ResponseModel(isSuccessfull: false, message: 'No Internet Connection', body: []);
+    } on http.ClientException catch (e) {
+      print('  ❌ Connection error: $e');
+      // Handle specific connection errors
+      if (e.message.contains('Connection reset') || e.message.contains('reset by peer')) {
+        return ResponseModel(
+          isSuccessfull: false, 
+          message: 'Connection was interrupted. Please check your internet and try again.', 
+          body: []
+        );
+      } else if (e.message.contains('Connection refused')) {
+        return ResponseModel(
+          isSuccessfull: false, 
+          message: 'Unable to connect to server. Please check your settings.', 
+          body: []
+        );
+      } else if (e.message.contains('timeout')) {
+        return ResponseModel(
+          isSuccessfull: false, 
+          message: 'Connection timed out. Please try again.', 
+          body: []
+        );
+      } else {
+        return ResponseModel(
+          isSuccessfull: false, 
+          message: 'Connection problem. Please check your internet and try again.', 
+          body: []
+        );
+      }
+    } on TimeoutException catch (_) {
+      print('  ❌ Request timeout');
+      return ResponseModel(
+        isSuccessfull: false, 
+        message: 'Request timed out. Please try again.', 
+        body: []
+      );
+    } on FormatException catch (_) {
+      print('  ❌ Invalid response format');
+      return ResponseModel(
+        isSuccessfull: false, 
+        message: 'Received invalid data from server. Please try again.', 
+        body: []
+      );
     } catch (e, stackTrace) {
       print('  💥 Exception in fetchPumps: $e');
       print('  Stack Trace: $stackTrace');
-      return ResponseModel(isSuccessfull: false, message: e.toString(), body: []);
+      
+      // Provide user-friendly message for any other errors
+      return ResponseModel(
+        isSuccessfull: false, 
+        message: 'Something went wrong. Please try again.', 
+        body: []
+      );
     }
   }
 }

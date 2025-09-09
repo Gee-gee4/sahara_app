@@ -1,5 +1,4 @@
 // ignore_for_file: avoid_print
-
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
@@ -62,7 +61,7 @@ class _CartPageState extends State<CartPage> {
 
   // builds a cart item for AUTO mode
   Widget _buildAutoModeCartItem(CartItem item, int index) {
-    final total = item.price * item.quantity;
+    final total = item.fixedTotal;
     return Card(
       color: Colors.brown[100],
       child: SizedBox(
@@ -148,7 +147,7 @@ class _CartPageState extends State<CartPage> {
 
   // builds a cart item for MANUAL mode has +&-
   Widget _buildManualModeCartItem(CartItem item, int index) {
-    final total = item.price * item.quantity;
+    final total = item.fixedTotal;
     return Card(
       color: Colors.brown[100],
       child: SizedBox(

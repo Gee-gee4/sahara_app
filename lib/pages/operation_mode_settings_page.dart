@@ -1,6 +1,8 @@
 // lib/pages/operation_mode_settings_page.dart
 import 'package:flutter/material.dart';
 import 'package:sahara_app/helpers/cart_storage.dart';
+import 'package:sahara_app/models/staff_list_model.dart';
+import 'package:sahara_app/pages/home_page.dart';
 import 'package:sahara_app/pages/pos_settings_helper.dart';
 import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/color_hex.dart';
@@ -11,7 +13,8 @@ import 'package:sahara_app/pages/pos_settings_form.dart';
 import 'package:sahara_app/helpers/shared_prefs_helper.dart';
 
 class OperationModeSettingsPage extends StatefulWidget {
-  const OperationModeSettingsPage({super.key});
+  const OperationModeSettingsPage({super.key, required this.user});
+  final StaffListModel user;
 
   @override
   State<OperationModeSettingsPage> createState() => _OperationModeSettingsPageState();
@@ -90,7 +93,55 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
       Navigator.pop(context);
       return;
     }
+    // Validate fetching time when auto mode is selected
+    if (_newMode == OperationMode.auto) {
+      final fetchingTime = _fetchingTimeController.text.trim();
+      final stationName = _stationNameController.text.trim();
 
+      if (stationName.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Station name is required for auto mode'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+      if (fetchingTime.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fetching time is required for auto mode'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      final minutes = int.tryParse(fetchingTime);
+      if (minutes == null || minutes <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please enter a valid number of minutes (e.g., 5)'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // if (minutes < 1 || minutes > 60) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text('Fetching time must be between 1 and 60 minutes'),
+      //       backgroundColor: Colors.grey,
+      //       duration: Duration(seconds: 3),
+      //     ),
+      //   );
+      //   return;
+      // }
+    }
     setState(() => _isLoading = true);
 
     try {
@@ -147,7 +198,10 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
         // Wait a moment for the snackbar to show, then go back
         await Future.delayed(Duration(milliseconds: 1500));
         if (context.mounted) {
-          Navigator.pop(context);
+           Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => HomePage(user: widget.user)), // You'll need to pass the user
+      (route) => false
+    );
         }
       }
     } catch (e) {
@@ -185,7 +239,7 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
           controller: _stationNameController,
           cursorColor: ColorsUniversal.buttonsColor,
           decoration: InputDecoration(
-            labelText: 'Station Name',
+            labelText: 'Station Name *',
             labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
             hintText: 'Enter station name',
             border: OutlineInputBorder(),
@@ -198,9 +252,9 @@ class _OperationModeSettingsPageState extends State<OperationModeSettingsPage> {
           controller: _fetchingTimeController,
           cursorColor: ColorsUniversal.buttonsColor,
           decoration: InputDecoration(
-            labelText: 'Fetching Time',
+            labelText: 'Fetching Time *',
             labelStyle: TextStyle(color: ColorsUniversal.buttonsColor),
-            hintText: 'Enter time in seconds',
+            hintText: 'Enter time in minutes',
             border: OutlineInputBorder(),
             focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ColorsUniversal.buttonsColor)),
           ),

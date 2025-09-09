@@ -54,54 +54,121 @@ class _TransactionPageState extends State<TransactionPage> {
 
     print('🔍 TransactionPage: Fetching transactions for pump: ${widget.pumpId}');
 
-    final response = widget.pumpId == 'all'
-        ? await _transactionModule.fetchAllTransactions()
-        : await _transactionModule.fetchTransactions(widget.pumpId);
+    try {
+      final response = widget.pumpId == 'all'
+          ? await _transactionModule.fetchAllTransactions()
+          : await _transactionModule.fetchTransactions(widget.pumpId);
 
-    setState(() {
-      isFetching = false;
+      setState(() {
+        isFetching = false;
 
-      if (response.isSuccessfull) {
-        transactions = response.body;
-        nozzles = transactions.map((tx) => tx.nozzle).toSet().toList();
+        if (response.isSuccessfull) {
+          transactions = response.body;
+          nozzles = transactions.map((tx) => tx.nozzle).toSet().toList();
+          print('✅ TransactionPage: Loaded ${transactions.length} transactions');
+          print('  Nozzles found: $nozzles');
+        } else {
+          errorMessage = response.message;
+          transactions = [];
+          nozzles = [];
 
-        print('✅ TransactionPage: Loaded ${transactions.length} transactions');
-        print('  Nozzles found: $nozzles');
-      } else {
-        errorMessage = response.message;
+          // Show error dialog for any network connectivity issues
+          if (_isNetworkError(errorMessage!)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showErrorDialog('No Internet Connectivity. Please check your connection and try again.');
+            });
+          } else {
+            // Show the specific error message for non-network errors
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showErrorDialog(errorMessage!);
+            });
+          }
+        }
+      });
+    } catch (e) {
+      setState(() {
+        isFetching = false;
+        errorMessage = e.toString();
         transactions = [];
         nozzles = [];
+      });
 
-        // Show error dialog for internet connectivity issues
-        if (errorMessage!.contains('No Internet Connectivity')) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showErrorDialog(errorMessage!);
-          });
-        }
+      // Show error dialog for any network connectivity issues from exceptions
+      if (_isNetworkError(e.toString())) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showErrorDialog('No Internet Connectivity. Please check your connection and try again.');
+        });
+      } else {
+        // Show the specific error message for non-network errors
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showErrorDialog('An unexpected error occurred: ${e.toString()}');
+        });
       }
-    });
+    }
+  }
+
+  bool _isNetworkError(String errorMessage) {
+    final lowerCaseMessage = errorMessage.toLowerCase();
+
+    return lowerCaseMessage.contains('no internet connectivity') ||
+        lowerCaseMessage.contains('connection reset by peer') ||
+        lowerCaseMessage.contains('connection refused') ||
+        lowerCaseMessage.contains('failed host lookup') ||
+        lowerCaseMessage.contains('socket exception') ||
+        lowerCaseMessage.contains('network is unreachable') ||
+        lowerCaseMessage.contains('timed out') ||
+        lowerCaseMessage.contains('clientexception') ||
+        lowerCaseMessage.contains('ioexception') ||
+        lowerCaseMessage.contains('handshake exception');
   }
 
   void _showErrorDialog(String message) {
+    final isNetworkError = _isNetworkError(message);
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Error'),
-        content: Text(message),
+        title: Row(
+          children: [
+            Icon(isNetworkError ? Icons.wifi_off : Icons.error_outline, color: Colors.orange),
+            SizedBox(width: 3),
+            Text(isNetworkError ? 'Connection Problem' : 'Error'),
+          ],
+        ),
+        content: Text(
+          isNetworkError ? 'No Internet Connectivity. Please check your connection and try again.' : message,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-          if (message.contains('No Internet Connectivity'))
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: TextStyle(color: ColorsUniversal.buttonsColor)),
+          ),
+          if (isNetworkError)
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 fetchAndSetTransactions(); // Retry
               },
-              child: const Text('Retry'),
+              child: Text('Retry', style: TextStyle(color: ColorsUniversal.buttonsColor, fontSize: 18)),
             ),
         ],
       ),
     );
+  }
+
+  String _getUserFriendlyErrorMessage(String technicalMessage) {
+    if (_isNetworkError(technicalMessage)) {
+      return 'No Internet Connectivity.';
+    } else if (technicalMessage.contains('404')) {
+      return 'The requested information was not found.';
+    } else if (technicalMessage.contains('401') || technicalMessage.contains('403')) {
+      return 'Access denied. Please contact support.';
+    } else if (technicalMessage.contains('500')) {
+      return 'Server is temporarily unavailable. Please try again later.';
+    } else {
+      return 'Something went wrong. Please try again or contact support.';
+    }
   }
 
   @override
@@ -169,7 +236,7 @@ class _TransactionPageState extends State<TransactionPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    errorMessage!,
+                    _getUserFriendlyErrorMessage(errorMessage!),
                     style: TextStyle(fontSize: 16, color: ColorsUniversal.appBarColor),
                     textAlign: TextAlign.center,
                   ),
@@ -283,6 +350,8 @@ class _TransactionPageState extends State<TransactionPage> {
                               transaction.productName, // name (String)
                               transaction.price, // unitPrice (double)
                               transaction.volume, // quantity (double) - fixed quantity from transaction
+                              fixedTotal: transaction.totalAmount,
+                              isTransaction: true
                             );
 
                             ScaffoldMessenger.of(context).showSnackBar(

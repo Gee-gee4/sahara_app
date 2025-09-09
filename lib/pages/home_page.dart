@@ -283,7 +283,7 @@ class _HomePageState extends State<HomePage> {
                 if (value == 'sync') {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const SyncItemsPage()));
                 } else if (value == 'operation_mode') {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => OperationModeSettingsPage()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => OperationModeSettingsPage(user: widget.user,)));
                 } else if (value == 'receipt_settings') {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const BasicPosSettingsPage()));
                 } else if (value == 'cloud') {
@@ -320,7 +320,7 @@ class _HomePageState extends State<HomePage> {
         bottomNavigationBar: ConvexAppBar(
           backgroundColor: ColorsUniversal.fillWids,
           activeColor: ColorsUniversal.buttonsColor,
-          color: Colors.white70,
+          color: Colors.brown[800],
           style: TabStyle.react,
           curveSize: 70,
           items: const [

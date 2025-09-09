@@ -16,6 +16,7 @@ import 'package:sahara_app/pages/users_page.dart';
 import 'package:sahara_app/utils/colors_universal.dart';
 import 'package:sahara_app/widgets/reusable_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 class PosSettingsForm extends StatefulWidget {
   final bool showSyncButton;
@@ -124,7 +125,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                     if (_mode == OperationMode.auto) ...[
                       AutoModeSettings(
                         borderColor: ColorsUniversal.buttonsColor,
-                        urlController: _urlController, // Pass same controllers
+                        urlController: _urlController,
                         stationNameController: _stationNameController,
                         fetchingTimeController: _fetchingTimeController,
                       ),
@@ -180,6 +181,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                       // Convert settings to saveable format
                       final modeString = _mode == OperationMode.manual ? 'manual' : 'auto';
                       final receiptCount = _receipt == ReceiptNumber.single ? 1 : 2;
+                      
                       // saves the ACTUAL values from the text fields
                       await PosSettingsHelper.saveSettings(
                         url: _urlController.text,
@@ -198,66 +200,167 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                         receiptCount: receiptCount,
                         printPolicies: _printPolicies,
                       );
+                      
                       final deviceId = await getSavedOrFetchDeviceId();
                       print('📱 Device ID: $deviceId');
 
                       // Fetch channel details by device ID
                       final channelResponse = await ChannelService.fetchChannelByDeviceId(deviceId);
 
-                      //Check if the channel fetch was successful
+                      // Check if the channel fetch was successful
                       if (!channelResponse.isSuccessfull) {
-                        // Show error message
-                        if (rootContext.mounted) {
-                          showDialog(
-                            context: rootContext,
-                            builder: (_) => AlertDialog(
-                              backgroundColor: Colors.white,
-                              title: Text('Error'),
-                              content: Text(channelResponse.message),
-                              actions: [TextButton(child: Text('OK'), onPressed: () => Navigator.pop(rootContext))],
-                            ),
-                          );
+                        // Check if it's specifically a "device not registered" error
+                        if (channelResponse.message.contains('Channel Details Not Set') || 
+                            channelResponse.message.contains('Device not registered') ||
+                            channelResponse.message.contains('not registered') ||
+                            channelResponse.message.contains('not found')) {
+                          
+                          // Show device registration dialog
+                          if (rootContext.mounted) {
+                            showDialog(
+                              context: rootContext,
+                              builder: (_) => AlertDialog(
+                                backgroundColor: Colors.white,
+                                title: const Text('Device Not Registered'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'This device is not registered in the system.',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Device ID:',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: SelectableText(
+                                        deviceId,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontFamily: 'monospace',
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Please contact your administrator to register this device.',
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    child: Text(
+                                      'Copy Device ID',
+                                      style: TextStyle(color: Colors.brown[600], fontSize: 16),
+                                    ),
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(text: deviceId));
+                                      ScaffoldMessenger.of(rootContext).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Device ID copied to clipboard'),
+                                          duration: Duration(seconds: 2),
+                                        )
+                                      );
+                                    },
+                                  ),
+                                  TextButton(
+                                    child: Text(
+                                      'OK', 
+                                      style: TextStyle(color: Colors.brown[800], fontSize: 17),
+                                    ),
+                                    onPressed: () => Navigator.pop(rootContext),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        } else if (channelResponse.message.contains('No Internet Connectivity')) {
+                          // Show internet connectivity error
+                          if (rootContext.mounted) {
+                            showDialog(
+                              context: rootContext,
+                              builder: (_) => AlertDialog(
+                                backgroundColor: Colors.white,
+                                title: const Text('No Internet Connection'),
+                                content: const Text(
+                                  'Internet connection is required to sync with the server. Please check your connection and try again.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    child: const Text('OK'),
+                                    onPressed: () => Navigator.pop(rootContext),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        } else {
+                          // Show generic error for other issues
+                          if (rootContext.mounted) {
+                            showDialog(
+                              context: rootContext,
+                              builder: (_) => AlertDialog(
+                                backgroundColor: Colors.white,
+                                title: const Text('Error'),
+                                content: Text(channelResponse.message),
+                                actions: [
+                                  TextButton(
+                                    child: const Text('OK'),
+                                    onPressed: () => Navigator.pop(rootContext),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
                         }
                         return; // Stop execution here
                       }
 
-                      // Fetch accepted payment modes for this device
-                      final acceptedProductModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
-                      print('✅ Accepted payment modes:');
-                      for (var mode in acceptedProductModes.body) {
-                        print('  • ${mode.payModeDisplayName} (${mode.payModeCategory})');
-                      }
-
-                      // Fetch available redeem rewards
-                      final redeemRewards = await RedeemRewardsService.fetchRedeemRewards();
-                      print('✅ Redeem rewards found:');
-                      for (var reward in redeemRewards.body) {
-                        print('  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})');
-                      }
-
-                      // Fetch staff list for this station
-                      final staffList = await StaffListService.fetchStaffList(deviceId);
-
-                      print('✅ The Staff List is:');
-                      for (var staff in staffList.body) {
-                        print('  •${staff.staffName} (${staff.staffPin})');
-                      }
-
-                      // Fetch product catalog
-                      final productItems = await ProductService.fetchProductItems(deviceId);
-                      // Print product categories and variations
-                      print('✅ Product categories fetched:');
-                      for (var category in productItems.body) {
-                        print('📦 Category: ${category.productCategoryName}');
-                        for (var product in category.products) {
-                          print('   • Product: ${product.productName}');
-                          for (var variation in product.productVariations) {
-                            print('     - ${variation.productVariationName}: KES ${variation.productVariationPrice}');
-                          }
-                        }
-                      }
+                      // If we reach here, channel fetch was successful
                       final channel = channelResponse.body;
                       if (channel != null) {
+                        // Fetch other data (payment modes, rewards, staff, products)
+                        final acceptedProductModes = await PaymentModeService.fetchPosAcceptedModesByDevice(deviceId);
+                        print('✅ Accepted payment modes:');
+                        for (var mode in acceptedProductModes.body) {
+                          print('  • ${mode.payModeDisplayName} (${mode.payModeCategory})');
+                        }
+
+                        final redeemRewards = await RedeemRewardsService.fetchRedeemRewards();
+                        print('✅ Redeem rewards found:');
+                        for (var reward in redeemRewards.body) {
+                          print('  • ${reward.rewardName} (${reward.rewardGroup.rewardGroupName})');
+                        }
+
+                        final staffList = await StaffListService.fetchStaffList(deviceId);
+                        print('✅ The Staff List is:');
+                        for (var staff in staffList.body) {
+                          print('  •${staff.staffName} (${staff.staffPin})');
+                        }
+
+                        final productItems = await ProductService.fetchProductItems(deviceId);
+                        print('✅ Product categories fetched:');
+                        for (var category in productItems.body) {
+                          print('📦 Category: ${category.productCategoryName}');
+                          for (var product in category.products) {
+                            print('   • Product: ${product.productName}');
+                            for (var variation in product.productVariations) {
+                              print('     - ${variation.productVariationName}: KES ${variation.productVariationPrice}');
+                            }
+                          }
+                        }
+
                         // Save basic channel info to shared prefs
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setString('channel', channel.channelName);
@@ -274,7 +377,6 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                               TextButton(
                                 child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
                                 onPressed: () async {
-                                  // Show progress dialog while saving everything
                                   if (!rootContext.mounted) return;
                                   // Use full-screen loader instead
                                   setState(() => isFinalSync = true);
@@ -314,7 +416,7 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
 
                                     // Navigate to UsersPage
                                     if (rootContext.mounted) {
-                                      setState(() => isFinalSync = false); // remove loading screen
+                                      setState(() => isFinalSync = false);
 
                                       // Mark setup as complete
                                       final prefs = await SharedPreferences.getInstance();
@@ -323,7 +425,6 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                                     }
                                   } catch (e) {
                                     print('❌ Error saving data: $e');
-                                    // If anything fails, at least close the progress dialog
                                     if (rootContext.mounted) {
                                       setState(() => isFinalSync = false);
                                     }
@@ -333,32 +434,6 @@ class _PosSettingsFormState extends State<PosSettingsForm> {
                             ],
                           ),
                         );
-                      } else {
-                        print('📱 Device ID: $deviceId');
-                        // Show error if device not registered
-                        if (rootContext.mounted) {
-                          showDialog(
-                            context: rootContext,
-                            builder: (_) => AlertDialog(
-                              backgroundColor: Colors.white,
-                              title: const Text('Validation Failed'),
-                              content: Text(
-                                'This device is not registered.\nDevice ID: $deviceId',
-                                style: TextStyle(fontSize: 17),
-                              ),
-                              actions: [
-                                TextButton(
-                                  child: Text('OK', style: TextStyle(color: Colors.brown[800], fontSize: 17)),
-                                  onPressed: () {
-                                    if (rootContext.mounted) {
-                                      Navigator.pop(rootContext);
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }
                       }
                     } catch (e) {
                       if (rootContext.mounted) Navigator.pop(rootContext);
